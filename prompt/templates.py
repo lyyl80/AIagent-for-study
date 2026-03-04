@@ -1,28 +1,15 @@
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
 class PromptTemplate:
     """
-    提示模板类，用于生成不同类型的提示
+    提示模板类，用于定义提示字符串的格式和内容
     """
-    
-    def __init__(self, template_string):
-        """
-        初始化提示模板
-        
-        Args:
-            template_string (str): 模板字符串，使用 {variable_name} 格式作为占位符
-        """
-        self.template_string = template_string
-    
-    def format(self, **kwargs):
-        """
-        使用提供的参数格式化模板
-        
-        Args:
-            **kwargs: 用于替换模板中占位符的键值对
-            
-        Returns:
-            str: 格式化后的提示字符串
-        """
-        return self.template_string.format(**kwargs)
+    name: str
+    content: str
+    description : Optional[str] = None
 
 
 class TemplateManager:
@@ -34,40 +21,47 @@ class TemplateManager:
         self.templates = {
             # 基础对话模板
             "basic_chat": PromptTemplate(
-                "用户输入: {input}\n请基于以上输入进行回复。"
+                name = "basic_chat",
+                content = "请基于以下内容进行回复：{content}",
+                description = "基础对话"
             ),
             
             # 系统指令模板
             "system_instruction": PromptTemplate(
-                "你是{role}，一个{description}的AI助手。\n"
-                "请遵守以下规则：\n{rules}\n\n"
-                "用户输入: {input}"
+                name = "system_instruction",
+                content = "请基于以下内容进行回复：{content}",
+                description = "系统指令"
             ),
             
             # 多轮对话模板
             "multi_turn_chat": PromptTemplate(
-                "历史对话:\n{history}\n\n"
-                "最新用户输入: {input}\n\n"
-                "请基于历史对话和最新输入进行回复。"
+                name = "multi_turn_chat",
+                content = "请基于以下内容进行回复：{content}",
+                description = "多轮对话"
             ),
             
             # 总结模板
             "summarize": PromptTemplate(
-                "请总结以下内容:\n{content}\n\n"
-                "要求简洁明了，突出重点。"
+                name = "summarize",
+                content = "请基于以下内容进行总结：{content}",
+                description = "总结"
             ),
             
             # 问题解答模板
             "question_answering": PromptTemplate(
-                "问题: {question}\n"
-                "上下文: {context}\n\n"
-                "请基于提供的上下文回答问题，如果无法从上下文中找到答案，请说明无法确定答案。"
+                name = "question_answering",
+                content = "问题: {question}\n"
+                          "上下文: {context}\n\n"
+                          "请基于提供的上下文回答问题，如果无法从上下文中找到答案，请说明无法确定答案。",
+                description = "问题解答"
             ),
             
             # 分析模板
             "analysis": PromptTemplate(
-                "请分析以下内容:\n{content}\n\n"
-                "分析角度包括: {aspects}"
+                name = "analysis",
+                content = "请分析以下内容:\n{content}\n\n"
+                          "分析角度包括: {aspects}",
+                description = "分析"
             )
         }
     

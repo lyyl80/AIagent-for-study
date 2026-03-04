@@ -9,7 +9,7 @@ def deep_seek_chat(messages, template_name=None, **template_kwargs):
         if template_name:
             formatted_content = format_prompt(template_name, **template_kwargs)
             # 将格式化的提示添加到消息的最后
-            messages = messages + [{"role": "user", "content": formatted_content}]
+            messages = messages + [{"role": "system", "content": formatted_content}]
         
         client = OpenAI(api_key=DEEP_SEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
         response = client.chat.completions.create(
@@ -28,7 +28,7 @@ def local_chat(messages, template_name=None, **template_kwargs):
         if template_name:
             formatted_content = format_prompt(template_name, **template_kwargs)
             # 将格式化的提示添加到消息的最后
-            messages = messages + [{"role": "user", "content": formatted_content}]
+            messages = messages + [{"role": "system", "content": formatted_content}]
             
         response = chat(
             model=LLM_MODEL,
