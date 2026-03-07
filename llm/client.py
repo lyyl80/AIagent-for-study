@@ -2,7 +2,6 @@ from ollama import chat
 from openai import OpenAI
 import json
 from config import *
-from prompt import format_prompt, get_template
 
 def deep_seek_chat(messages):
     try:
