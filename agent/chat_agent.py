@@ -1,11 +1,11 @@
 from llm.client import  local_chat , llm_json
 from agent.memory import Memory
 from prompt.templates import SYSTEM_PROMPT , THINK_PROMPT , ACTION_SCHEMA, REFLECT_PROMPT
-from tools.tools import call_tool, get_tool_description, TOOL_REGISTRY
+from tools import call_tool, get_tool_description, TOOL_REGISTRY
 class ChatAgent:
     def __init__(self, task):
         self.llm_json = llm_json
-        self.llm = local_chat()
+        self.llm = local_chat
         self.history= Memory()
         self.task = task
         self.max_steps = 10

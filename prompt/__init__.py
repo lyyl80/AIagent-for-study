@@ -3,6 +3,4 @@ from .templates import (
     THINK_PROMPT,
     ACTION_SCHEMA,
     REFLECT_PROMPT,
-    get_template,
-    format_prompt
 )
