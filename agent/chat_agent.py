@@ -11,7 +11,8 @@ class ChatAgent:
         self.max_steps = 10
 
     def build_prompt(self):
-        return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(),action_schema=ACTION_SCHEMA.format(tools=get_tool_description()))
+        tools_desc = get_tool_description()
+        return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
     def think(self):
         prompt = self.build_prompt()
         response = self.llm_json([
