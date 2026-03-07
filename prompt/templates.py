@@ -25,7 +25,7 @@ THINK_PROMPT = """
 任务: {task}
 提示: {history}
 可用工具: {tools}
-请思考下一步要做什么,并输出你的思考
+请思考下一步要做什么,根据下面的工具列表并输出你的思考
 {action_schema}
  当你觉得需求已经完成了,请选择工具finish,并且输出{{"tool":"finish","tool_args":{{}}}}来结束任务
 """

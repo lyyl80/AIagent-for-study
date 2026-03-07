@@ -101,5 +101,15 @@ def run_shell(**kwargs):
     except Exception as e:
         return f"Unexpected error executing command: {str(e)}"
 
+def talk_tool(**kwargs):
+   """
+   聊天
+   :param content: 聊天内容
+   :return: 聊天结果
+   """
+   content = kwargs["content"]
+   return f"你说: {content}"
+   
+
 
     

@@ -1,10 +1,11 @@
-from .tools import calculator_tool, read_file_tool, run_shell, write_file_tool
+from .tools import calculator_tool, read_file_tool, run_shell, write_file_tool ,talk_tool
 
 TOOL_REGISTRY = {
     "calculator": (calculator_tool, "计算数学表达式"),
     "read_file": (read_file_tool, "读取文件"),
     "write_file": (write_file_tool, "写入文件"),
     "shell": (run_shell, "运行shell命令"),
+    "talk": (talk_tool, "与用户进行对话"),
     "finish": (lambda: "任务完成", "结束任务")
 }
 def call_tool(tool_name, **kwargs):
