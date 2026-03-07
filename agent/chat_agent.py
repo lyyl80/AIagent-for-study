@@ -11,7 +11,8 @@ class ChatAgent:
         self.max_steps = 10
 
     def build_prompt(self):
-        return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(),action_schema=ACTION_SCHEMA.format(tools=get_tool_description()))
+        tool_desc = get_tool_description()
+        return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tool_desc, action_schema=ACTION_SCHEMA.format(tools=tool_desc))
     def think(self):
         prompt = self.build_prompt()
         response = self.llm_json([
@@ -20,6 +21,9 @@ class ChatAgent:
         ])
         return response
     def reflect(self,result,tool_name,tool_args):
+        if tool_name is None:
+            tool_name = "无工具"
+            tool_args = {}
         messages = REFLECT_PROMPT.format(result=result,history = self.history.get_recent_conversations(),tool_name=tool_name,tool_args=tool_args)
         return self.llm([
         {"role": "user", "content": messages}
@@ -38,10 +42,15 @@ class ChatAgent:
         action = self.think()
         print(f"Action: {action}")
         print("Executing...")
-        result = self.execute(action)
+        tool = action.get("tool")
+        tool_args = action.get("tool_args", {})
+        if tool and tool in TOOL_REGISTRY:
+            result = self.execute(action)
+        else:
+            result = action.get("response", action)
         print(f"Result: {result}")
         print("Reflecting...")
-        reflect = self.reflect(result,action.get("tool"),action.get("tool_args"))
+        reflect = self.reflect(result, tool, tool_args)
         print(f"Reflect: {reflect}")
         self.history.add_conversation({"input": action, "output": result, "reflect": reflect})
         return action
