@@ -1,5 +1,6 @@
 from ollama import chat
 from openai import OpenAI
+import json
 from config import *
 from prompt import format_prompt, get_template
 
@@ -26,3 +27,10 @@ def local_chat(messages):
         return response["message"]["content"]
     except Exception as e:
         return f"本地模型调用失败: {str(e)}"
+    
+def llm_json(messages):
+    response = local_chat(messages)
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError:
+        return {"error": "LLM返回的内容不是有效的JSON", "raw_response": response}
