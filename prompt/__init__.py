@@ -1,15 +1,1 @@
-from .templates import (
-    PromptTemplate,
-    TemplateManager,
-    get_template,
-    format_prompt,
-    template_manager
-)
-
-__all__ = [
-    "PromptTemplate",
-    "TemplateManager",
-    "get_template",
-    "format_prompt",
-    "template_manager"
-]
+from .templates import SYSTEM_PROMPT , THINK_PROMPT
