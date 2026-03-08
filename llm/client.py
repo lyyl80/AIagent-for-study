@@ -16,19 +16,28 @@ def deep_seek_chat(messages):
         return f"DeepSeek API调用失败: {str(e)}"
 
 
-def local_chat(messages):
+def local_chat(messages, prefix="Thinking: "):
     try:
         response = chat(
             model=LLM_MODEL,
             messages=messages,
-            stream=False,
+            stream=True,
         )
-        return response["message"]["content"]
+        full_content = ""
+        if prefix:
+            print(prefix, end="", flush=True)
+        for chunk in response:
+            content = chunk.get("message", {}).get("content", "")
+            if content:
+                full_content += content
+                print(content, end="", flush=True)
+        print()  # 换行
+        return full_content
     except Exception as e:
         return f"本地模型调用失败: {str(e)}"
     
 def llm_json(messages):
-    response = local_chat(messages)
+    response = local_chat(messages, prefix="Thinking: ")
     # 清理markdown代码块
     cleaned = response.strip()
     if cleaned.startswith("```json"):

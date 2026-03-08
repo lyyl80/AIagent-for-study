@@ -14,7 +14,6 @@ class ChatAgent:
         tools_desc = get_tool_description()
         return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
     def think(self):
-        print("Thinking...")
         prompt = self.build_prompt()
         response = self.llm_json([
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -25,7 +24,7 @@ class ChatAgent:
         messages = REFLECT_PROMPT.format(result=result,history = self.history.get_recent_conversations(),tool_name=tool_name,tool_args=tool_args)
         return self.llm([
         {"role": "user", "content": messages}
-        ])
+        ], prefix="Reflecting: ")
         
     
     def execute(self,action):
