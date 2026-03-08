@@ -1,10 +1,9 @@
-from .tools import calculator_tool, read_file_tool, run_shell, write_file_tool ,talk_tool
+from .tools import  read_file_tool, run_shell, write_file_tool ,talk_tool
 
 TOOL_REGISTRY = {
-    "calculator": (calculator_tool, "计算数学表达式"),
     "read_file": (read_file_tool, "读取文件"),
     "write_file": (write_file_tool, "写入文件"),
-    "shell": (run_shell, "运行shell命令"),
+    "shell": (run_shell, "运行shell命令常用windows shell命令有: dir, cat, echo, mkdir, rm,pwd, mv, cp, find, grep, sort, uniq, head, tail, wc, man, ps, kill, netstat, ifconfig, ip, ping, traceroute, dig, nslookup, whois, telnet, ssh, scp, ftp, rsync, vim, emacs, nano, less, more, head, tail, cat, sort, uniq,"),
     "talk": (talk_tool, "与用户进行对话，参数: message/content/text - 聊天内容"),
     "finish": (lambda: "任务完成", "结束任务")
 }
