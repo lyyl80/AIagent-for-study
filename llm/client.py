@@ -30,7 +30,16 @@ def local_chat(messages):
 def llm_json(messages):
     response = local_chat(messages)
     print(f"LLM原始响应: {response}")
+    # 清理markdown代码块
+    cleaned = response.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]  # 移除 ```json
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]  # 移除 ```
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]  # 移除结尾的 ```
+    cleaned = cleaned.strip()
     try:
-        return json.loads(response)
+        return json.loads(cleaned)
     except json.JSONDecodeError:
         return {"error": "LLM返回的内容不是有效的JSON", "raw_response": response}
