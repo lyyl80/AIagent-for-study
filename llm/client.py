@@ -29,6 +29,7 @@ def local_chat(messages):
     
 def llm_json(messages):
     response = local_chat(messages)
+    print(f"LLM原始响应: {response}")
     try:
         return json.loads(response)
     except json.JSONDecodeError:
