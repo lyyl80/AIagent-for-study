@@ -5,7 +5,7 @@ TOOL_REGISTRY = {
     "read_file": (read_file_tool, "读取文件"),
     "write_file": (write_file_tool, "写入文件"),
     "shell": (run_shell, "运行shell命令"),
-    "talk": (talk_tool, "与用户进行对话"),
+    "talk": (talk_tool, "与用户进行对话，参数: message/content/text - 聊天内容"),
     "finish": (lambda: "任务完成", "结束任务")
 }
 def call_tool(tool_name, **kwargs):

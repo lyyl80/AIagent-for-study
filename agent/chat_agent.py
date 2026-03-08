@@ -14,6 +14,7 @@ class ChatAgent:
         tools_desc = get_tool_description()
         return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
     def think(self):
+        print("Thinking...")
         prompt = self.build_prompt()
         response = self.llm_json([
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -32,27 +33,41 @@ class ChatAgent:
         tool_args = action.get("tool_args", {})
         if tool not in TOOL_REGISTRY.keys():
             return "Invalid tool"
+        
+        # 打印工具调用信息
+        print(f"Using tool: {tool}")
+        if tool_args:
+            # 简化参数显示，避免过长
+            args_str = ", ".join([f"{k}={repr(v)[:50]}" for k, v in tool_args.items()])
+            if args_str:
+                print(f"  Args: {args_str}")
+        
         result = call_tool(tool, **tool_args)
+        
+        # 对于talk工具，打印助理回复，不打印结果
+        if tool == "talk":
+            message = tool_args.get("message") or tool_args.get("content") or ""
+            if message:
+                print(f"Assistant: {message}")
+        else:
+            # 打印其他工具的结果（截断长输出）
+            if result and len(str(result)) > 200:
+                print(f"Result: {str(result)[:200]}...")
+            else:
+                print(f"Result: {result}")
+        
         return result
     def step(self):
-        print("Thinking...")
         raw_action = self.think()
-        print(f"Action: {raw_action}")
-        # 提取内部的action，兼容嵌套格式
         inner_action = raw_action.get("action", raw_action)
-        print("Executing...")
         result = self.execute(inner_action)
-        print(f"Result: {result}")
-        print("Reflecting...")
         reflect = self.reflect(result, inner_action.get("tool"), inner_action.get("tool_args", {}))
-        print(f"Reflect: {reflect}")
         self.history.add_conversation({"input": inner_action, "output": result, "reflect": reflect})
         return inner_action
     def run(self):
-        print(f"Starting task: {self.task}")
+        print(f"Task: {self.task}")
         for i in range(self.max_steps):
             action = self.step()
             if action.get("tool") == "finish":
-                print(f"Task completed: {self.task}")
+                print("Task completed.")
                 break
-        print(f"Finished task: {self.task}")

@@ -104,13 +104,13 @@ def run_shell(**kwargs):
 def talk_tool(**kwargs):
    """
    聊天
-   :param message: 聊天内容
+   :param message: 聊天内容 (也接受 text, content 参数)
    :return: 聊天结果
    """
-   message = kwargs.get("message") or kwargs.get("content")
+   message = kwargs.get("message") or kwargs.get("content") or kwargs.get("text")
    if not message:
-       return "错误: 缺少聊天内容参数 'message' 或 'content'"
-   return f"你说: {message}"
+       return "错误: 缺少聊天内容参数 'message', 'content' 或 'text'"
+   return message
    
 
 
