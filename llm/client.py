@@ -29,7 +29,6 @@ def local_chat(messages):
     
 def llm_json(messages):
     response = local_chat(messages)
-    print(f"LLM原始响应: {response}")
     # 清理markdown代码块
     cleaned = response.strip()
     if cleaned.startswith("```json"):

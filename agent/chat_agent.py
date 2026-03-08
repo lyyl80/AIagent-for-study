@@ -30,22 +30,24 @@ class ChatAgent:
     def execute(self,action):
         tool = action.get("tool")
         tool_args = action.get("tool_args", {})
-        if tool not in TOOL_REGISTRY:
+        if tool not in TOOL_REGISTRY.keys():
             return "Invalid tool"
         result = call_tool(tool, **tool_args)
         return result
     def step(self):
         print("Thinking...")
-        action = self.think()
-        print(f"Action: {action}")
+        raw_action = self.think()
+        print(f"Action: {raw_action}")
+        # 提取内部的action，兼容嵌套格式
+        inner_action = raw_action.get("action", raw_action)
         print("Executing...")
-        result = self.execute(action)
+        result = self.execute(inner_action)
         print(f"Result: {result}")
         print("Reflecting...")
-        reflect = self.reflect(result,action.get("tool"),action.get("tool_args"))
+        reflect = self.reflect(result, inner_action.get("tool"), inner_action.get("tool_args", {}))
         print(f"Reflect: {reflect}")
-        self.history.add_conversation({"input": action, "output": result, "reflect": reflect})
-        return action
+        self.history.add_conversation({"input": inner_action, "output": result, "reflect": reflect})
+        return inner_action
     def run(self):
         print(f"Starting task: {self.task}")
         for i in range(self.max_steps):
