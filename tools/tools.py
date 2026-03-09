@@ -5,11 +5,13 @@ import sys
 def read_file_tool(**kwargs):
     """
     读取文件内容
-    :param file_path: 文件路径
+    :param file_path: 文件路径 (也接受 path 参数)
     :return: 文件内容字符串
     """
     try:
-        file_path = kwargs["file_path"]
+        file_path = kwargs.get("file_path") or kwargs.get("path")
+        if not file_path:
+            return "Error: Missing file path parameter (file_path or path)"
         with open(file_path, 'r') as file:
             content = file.read()
         return content
@@ -20,13 +22,15 @@ def read_file_tool(**kwargs):
 def write_file_tool(**kwargs):
    """
    写入文件内容
-   :param file_path: 文件路径
+   :param file_path: 文件路径 (也接受 path 参数)
    :param content: 文件内容字符串
    :return: None
    """
    try:
-    file_path = kwargs["file_path"]
+    file_path = kwargs.get("file_path") or kwargs.get("path")
     content = kwargs["content"]
+    if not file_path:
+        return "Error: Missing file path parameter (file_path or path)"
     with open(file_path, 'w') as file:
         file.write(content)
     return f"Successfully wrote to file: {file_path}"
