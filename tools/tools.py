@@ -81,6 +81,9 @@ def run_shell(**kwargs):
         # 检查命令是否成功执行
         if result.returncode != 0:
             error_output = result.stderr.decode('cp936') if sys.platform.startswith('win') else result.stderr.decode('utf-8')
+            # 如果错误信息包含"已经存在"，添加额外提示
+            if "已经存在" in error_output or "already exists" in error_output.lower():
+                error_output += " (目录/文件已存在，建议直接在该路径下操作，不要重复创建)"
             return f"Command failed with exit code {result.returncode}: {error_output}"
 
         return output
