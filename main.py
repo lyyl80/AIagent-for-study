@@ -5,10 +5,9 @@ if __name__ == "__main__":
     while True:
         user_input = input("You: ")
         agent = ChatAgent(user_input)
-
         if user_input.lower() in ["exit", "quit"]:
             print("Exiting the chat. Goodbye!")
             break
-
+        
         agent.run()
         

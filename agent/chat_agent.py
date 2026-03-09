@@ -1,7 +1,35 @@
-from llm.client import  local_chat , llm_json
+import time
+import threading
+from llm.client import  local_chat , llm_json, local_chat_no_print
 from agent.memory import Memory
 from prompt.templates import SYSTEM_PROMPT , THINK_PROMPT , ACTION_SCHEMA, REFLECT_PROMPT
 from tools import call_tool, get_tool_description, TOOL_REGISTRY
+
+class Spinner:
+    def __init__(self, message="Thinking: "):
+        self.message = message
+        self.stop_spinning = False
+        self.spinner_thread = None
+
+    def spin(self):
+        spinner_chars = "|/-\\"
+        idx = 0
+        while not self.stop_spinning:
+            print(f"\r{self.message}{spinner_chars[idx % len(spinner_chars)]}", end="", flush=True)
+            time.sleep(0.1)
+            idx += 1
+
+    def start(self):
+        self.stop_spinning = False
+        self.spinner_thread = threading.Thread(target=self.spin)
+        self.spinner_thread.start()
+
+    def stop(self):
+        self.stop_spinning = True
+        if self.spinner_thread:
+            self.spinner_thread.join()
+        print("\r", end="")  # 清除整行
+
 class ChatAgent:
     def __init__(self, task):
         self.llm_json = llm_json
@@ -13,13 +41,16 @@ class ChatAgent:
     def build_prompt(self):
         tools_desc = get_tool_description()
         return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
+    
     def think(self):
-        prompt = self.build_prompt()
-        response = self.llm_json([
+        
+        # 解析JSON，不显示任何内容
+        json_data = self.llm_json([
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": self.build_prompt()}
         ])
-        return response
+        return json_data
+    
     def reflect(self,result,tool_name,tool_args):
         messages = REFLECT_PROMPT.format(result=result,history = self.history.get_recent_conversations(),tool_name=tool_name,tool_args=tool_args)
         return self.llm([
@@ -33,13 +64,15 @@ class ChatAgent:
         if tool not in TOOL_REGISTRY.keys():
             return "Invalid tool"
         
-        # 打印工具调用信息
-        print(f"Using tool: {tool}")
-        if tool_args:
-            # 简化参数显示，避免过长
-            args_str = ", ".join([f"{k}={repr(v)[:50]}" for k, v in tool_args.items()])
-            if args_str:
-                print(f"  Args: {args_str}")
+        # 对于talk工具，不打印工具调用信息
+        if tool != "talk":
+            # 打印工具调用信息（除了talk工具）
+            print(f"Using tool: {tool}")
+            if tool_args:
+                # 简化参数显示，避免过长
+                args_str = ", ".join([f"{k}={repr(v)[:50]}" for k, v in tool_args.items()])
+                if args_str:
+                    print(f"  Args: {args_str}")
         
         result = call_tool(tool, **tool_args)
         
@@ -57,16 +90,43 @@ class ChatAgent:
         
         return result
     def step(self):
-        raw_action = self.think()
+        # 创建并启动spinner
+        spinner = Spinner()
+        spinner.start()
+        
+        try:
+            raw_action = self.think()
+        finally:
+            # 确保spinner停止
+            spinner.stop()
+        
         inner_action = raw_action.get("action", raw_action)
+        
+        # 检查是否为finish或talk工具，如果是则跳过反思
+        if inner_action.get("tool") in ["finish", "talk"]:
+            result = self.execute(inner_action)
+            # 直接返回，不进行反思
+            self.history.add_conversation({"input": inner_action, "output": result})
+            return inner_action
+        
+        # 对于非finish和talk工具，执行完整的流程（包括反思）
         result = self.execute(inner_action)
         reflect = self.reflect(result, inner_action.get("tool"), inner_action.get("tool_args", {}))
         self.history.add_conversation({"input": inner_action, "output": result, "reflect": reflect})
         return inner_action
     def run(self):
         print(f"Task: {self.task}")
-        for i in range(self.max_steps):
-            action = self.step()
-            if action.get("tool") == "finish":
-                print("Task completed.")
-                break
+        
+        # 创建并启动spinner
+        spinner = Spinner()
+        spinner.start()
+        
+        try:
+            for i in range(self.max_steps):
+                action = self.step()
+                if action.get("tool") == "finish":
+                    print("Task completed.")
+                    break
+        finally:
+            # 确保spinner停止
+            spinner.stop()
