@@ -1,0 +1,5 @@
+This is an essay about learning AI.
+
+AI is rapidly changing the world, and it's important to understand its principles and applications. Learning AI involves studying machine learning, deep learning, and natural language processing.
+
+It requires a strong foundation in mathematics and programming. There are many online resources and courses available to help people learn AI.
