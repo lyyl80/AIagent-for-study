@@ -17,11 +17,20 @@ class ChatAgent:
         prompt = self.build_prompt()
     
         # 解析JSON，不显示任何内容
-        json_data  = self.llm_json([
+        result = self.llm_json([
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ])
-        return json_data
+        
+        # 处理llm_json可能的元组返回（JSON解析失败的情况）
+        if isinstance(result, tuple):
+            error_data, raw_response = result
+            print(f"JSON解析错误: {error_data.get('error', '未知错误')}")
+            print(f"原始响应: {raw_response[:200]}...")
+            # 返回一个finish动作以结束任务
+            return {"action": {"tool": "finish"}}
+        
+        return result
     def reflect(self,result,tool_name,tool_args):
         messages = REFLECT_PROMPT.format(result=result,history = self.history.get_recent_conversations(),tool_name=tool_name,tool_args=tool_args)
         return self.llm([
@@ -65,7 +74,7 @@ class ChatAgent:
         inner_action = raw_action.get("action", raw_action)
         
         # 检查是否为finish或talk工具，如果是则跳过反思
-        if inner_action.get("tool") in "talk":
+        if inner_action.get("tool") in ["finish", "talk"]:
             result = self.execute(inner_action)
             # 直接返回，不进行反思
             self.history.add_conversation({"input": inner_action, "output": result})
