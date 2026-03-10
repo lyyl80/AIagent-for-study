@@ -42,7 +42,7 @@ class ChatAgent:
         tool = action.get("tool")
         tool_args = action.get("tool_args", {})
         if tool not in TOOL_REGISTRY.keys():
-            return "Invalid tool"
+            return ("Invalid tool", tool, False)
         
         # 对于talk工具，不打印工具调用信息
         if tool != "talk":
@@ -61,33 +61,44 @@ class ChatAgent:
             message = tool_args.get("message") or tool_args.get("content") or ""
             if message:
                 print(f"Assistant: {message}")
+            # 启发式判断是否需要用户输入：如果消息包含问号或中文询问词
+            need_user_input = any(keyword in message for keyword in ["?", "？", "请", "提供", "请输入", "请提供", "请告诉我", "需要什么", "需要哪些", "吗", "呢", "如何", "什么", "哪些", "谁", "哪里"])
         else:
             # 打印其他工具的结果（截断长输出）
             if result and len(str(result)) > 200:
                 print(f"Result: {str(result)[:200]}...")
             else:
                 print(f"Result: {result}")
+            need_user_input = False
         
-        return result
+        return (result, tool, need_user_input)
     def step(self):
         raw_action = self.think()
         inner_action = raw_action.get("action", raw_action)
         
         # 检查是否为finish或talk工具，如果是则跳过反思
         if inner_action.get("tool") in ["finish", "talk"]:
-            result = self.execute(inner_action)
+            result, tool, need_user_input = self.execute(inner_action)
             # 直接返回，不进行反思
             self.history.add_conversation({"input": inner_action, "output": result})
-            return inner_action
+            return inner_action, need_user_input
         # 对于非finish和talk工具，执行完整的流程（包括反思）
-        result = self.execute(inner_action)
+        result, tool, need_user_input = self.execute(inner_action)
         reflect = self.reflect(result, inner_action.get("tool"), inner_action.get("tool_args", {}))
         self.history.add_conversation({"input": inner_action, "output": result, "reflect": reflect})
-        return inner_action
+        return inner_action, need_user_input
     def run(self):
         print(f"Task: {self.task}")
         for i in range(self.max_steps):
-            action = self.step()
+            action, need_user_input = self.step()
             if action.get("tool") == "finish":
                 print("Task completed.")
                 break
+            if need_user_input:
+                user_input = input("You: ")
+                # 将用户输入添加到历史记录中，作为虚拟工具调用
+                self.history.add_conversation({
+                    "input": {"tool": "user", "tool_args": {"message": user_input}},
+                    "output": user_input,
+                    "reflect": "用户输入"
+                })
