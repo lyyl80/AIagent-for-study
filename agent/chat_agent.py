@@ -12,7 +12,7 @@ class ChatAgent:
 
     def build_prompt(self):
         tools_desc = get_tool_description()
-        return THINK_PROMPT.format(task=self.task, history=self.history.get_recent_conversations(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
+        return THINK_PROMPT.format(task=self.task, history=self.history.get_history(), tools=tools_desc, action_schema=ACTION_SCHEMA.format(tools=tools_desc))
     def think(self):
         prompt = self.build_prompt()
     
@@ -32,7 +32,7 @@ class ChatAgent:
         
         return result
     def reflect(self,result,tool_name,tool_args):
-        messages = REFLECT_PROMPT.format(result=result,history = self.history.get_recent_conversations(),tool_name=tool_name,tool_args=tool_args)
+        messages = REFLECT_PROMPT.format(result=result,history = self.history.get_history(),tool_name=tool_name,tool_args=tool_args)
         return self.llm([
         {"role": "user", "content": messages}
         ], prefix="Reflecting: ")
