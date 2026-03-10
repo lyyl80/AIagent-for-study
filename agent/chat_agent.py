@@ -65,7 +65,7 @@ class ChatAgent:
         inner_action = raw_action.get("action", raw_action)
         
         # 检查是否为finish或talk工具，如果是则跳过反思
-        if inner_action.get("tool") in ["finish", "talk"]:
+        if inner_action.get("tool") in "talk":
             result = self.execute(inner_action)
             # 直接返回，不进行反思
             self.history.add_conversation({"input": inner_action, "output": result})
