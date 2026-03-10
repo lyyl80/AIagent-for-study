@@ -74,9 +74,10 @@ THINK_PROMPT = """
     - 创建文件: `echo content > path\\to\\file.txt`
 
 7. **工具选择**:
-    - shell工具: 适合执行命令、检查目录、创建简单文件
+    - shell工具: 适合执行命令、检查目录、创建简单文件。支持超时(timeout，默认30秒)和工作目录(cwd)参数，避免长时间运行的命令。
     - write_file工具: 适合精确控制文件内容，特别是多行内容。当目录已存在时，推荐使用write_file工具在目录内创建文件。
-    - read_file工具: 检查文件内容
+    - replace_content工具: 适合替换文件中的特定内容，而不影响文件的其他部分。参数包括old_content（要替换的旧内容）和new_content（新内容）。
+    - read_file工具: 检查文件内容，支持行范围读取(start_line/end_line)或搜索特定内容(search)。在修改文件前，先用read_file获取要修改的内容。
     - talk工具: 适合回答问题、解释概念、提供信息、进行对话
     - 根据任务复杂度选择最合适的工具
     - **参数规范**: 必须使用工具描述中指定的参数名。对于文件操作，使用file_path参数（path也可接受）
