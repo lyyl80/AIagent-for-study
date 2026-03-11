@@ -1,5 +1,5 @@
 from typing import Dict, Any, Callable, Tuple, Optional
-from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool
+from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool
 
 
 # 工具注册表类型定义
@@ -46,11 +46,11 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
         }
     ),
     "finish": (
-        lambda: "任务完成",
-        "结束任务。无参数",
+        finish_tool,
+        "结束任务。可选参数: response - 结语消息",
         {
             "required_params": [],
-            "optional_params": []
+            "optional_params": ["response"]
         }
     )
 }

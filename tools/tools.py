@@ -64,7 +64,7 @@ def write_file_tool(**kwargs):
     content = kwargs["content"]
     if not file_path:
         return "Error: Missing file path parameter (file_path or path)"
-    with open(file_path, 'w') as file:
+    with open(file_path, 'w', encoding='utf-8') as file:
         file.write(content)
     return f"Successfully wrote to file: {file_path}"
    except Exception as e:
@@ -198,7 +198,17 @@ def replace_content_tool(**kwargs):
     except Exception as e:
         print(e)
         return f"Error replacing content in file: {str(e)}"
-   
 
+
+def finish_tool(**kwargs):
+    """
+    结束任务，可选地提供结语消息
+    :param response: 可选，结语消息
+    :return: 结束消息
+    """
+    response = kwargs.get("response")
+    if response:
+        return response
+    return "任务完成"
 
     
