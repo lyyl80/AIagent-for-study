@@ -15,8 +15,12 @@ class ChatAgent:
     def __init__(self, task: str):
         
         self.llm_json = model_manager.llm_json
-        self.llm = model_manager.call_model(model_manager.get_model_options().get(MODEL_ING), [SYSTEM_PROMPT], "")
-        
+        model_info = model_manager.get_model_by_key(MODEL_ING)
+        self.llm = lambda messages, system_prompt="": model_manager.call_model(
+            model_info, 
+            [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
+            system_prompt
+        )
         self.history = Memory()
         self.task = task
         self.max_steps = 10
@@ -47,7 +51,7 @@ class ChatAgent:
         prompt = self.build_prompt()
         
         # 调用LLM生成JSON格式的动作
-        result = self.llm_json(prompt, SYSTEM_PROMPT)
+        result = self.llm_json( prompt, SYSTEM_PROMPT)
         
         # 处理JSON解析错误
         if isinstance(result, tuple):

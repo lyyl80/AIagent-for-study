@@ -28,13 +28,32 @@ class ModelManager:
                 }
         return options
     
-    def call_model(self, model_info, messages, system_prompt):
+    def get_model_by_key(self, model_key):
+        """根据模型键获取模型信息"""
+        for category, models in self.available_models.items():
+            if model_key in models:
+                return {
+                    "key": model_key,
+                    "category": category,
+                    "type": models[model_key]["type"],
+                    "name": models[model_key]["name"]
+                }
+        # 如果没有找到，返回默认模型
+        default_key = "gpt-oss:20b"
+        return {
+            "key": default_key,
+            "category": "本地模型",
+            "type": self.available_models["本地模型"][default_key]["type"],
+            "name": self.available_models["本地模型"][default_key]["name"]
+        }
+    
+    def call_model(self, model_info, messages, system_prompt, output=True):
         """调用指定模型"""
         try:
             if model_info["type"] == "cloud":
-                return self._call_cloud_model(model_info["key"], messages, system_prompt)
+                return self._call_cloud_model(model_info["key"], messages, system_prompt, output=output)
             else:
-                return self._call_local_model(model_info["key"], messages, system_prompt)
+                return self._call_local_model(model_info["key"], messages, system_prompt, output=output)
         except Exception as e:
             raise Exception(f"模型调用失败: {str(e)}")
     
@@ -90,13 +109,18 @@ class ModelManager:
         except Exception as e:
             return f"本地模型调用失败: {str(e)}"
     def llm_json(self, messages, system_prompt):
-        response = self.call_model(self.get_model_options().get(MODEL_ING), messages, system_prompt)
-    # 清理代码块
+        # 如果messages是字符串，转换为消息列表
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+        response = self.call_model(self.get_model_by_key(MODEL_ING), messages, system_prompt,output=False)
+        # 清理代码块
         cleaned = response.strip()
         if cleaned.startswith("``json"):
             cleaned = cleaned[7:]  # 移除 ```json
         if cleaned.startswith("```"):
             cleaned = cleaned[3:]  # 移除 ```
+        if cleaned.endswith("````"):
+            cleaned = cleaned[:-4]  # 移除结尾的 ````
         if cleaned.endswith("```"):
             cleaned = cleaned[:-3]  # 移除结尾的 ```
         cleaned = cleaned.strip()
