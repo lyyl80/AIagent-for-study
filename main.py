@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""OpenCode AI Agent - 命令行界面
-
-基于OpenCode架构重构的AI代理系统，支持工具调用和对话交互。
+""" AI Agent - 命令行界面
 """
 
 import argparse

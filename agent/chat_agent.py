@@ -6,9 +6,8 @@ from tools import call_tool, get_tool_description, TOOL_REGISTRY
 
 
 class ChatAgent:
-    """基于OpenCode架构重构的聊天代理
-    
-    遵循OpenCode设计模式，实现思考-执行-反思循环。
+    """
+    实现思考-执行-反思循环。
     支持工具调用、历史记忆和用户交互。
     """
     
