@@ -14,7 +14,7 @@ from agent.memory import Memory
 def parse_arguments():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(
-        description="OpenCode AI Agent - 智能代理系统",
+        description=" AI Agent - 智能代理系统",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
@@ -189,10 +189,6 @@ def run_interactive_mode(session_path: Optional[str] = None, verbose: bool = Fal
                 continue
                 
             agent = ChatAgent(user_input)
-            
-            # 如果存在记忆，可以传递给代理（当前ChatAgent未直接支持，这里仅作示例）
-            # 实际实现时应在ChatAgent构造函数中接受memory参数
-            
             agent.run()
             
             # 如果需要，将本次对话添加到记忆
