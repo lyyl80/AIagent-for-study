@@ -1,10 +1,11 @@
 from typing import Dict, Any, Optional, Tuple
-from llm.client import local_chat, llm_json, local_chat_no_print
+from llm.client import ModelManager
 from agent.memory import Memory
 from prompt.templates import SYSTEM_PROMPT, THINK_PROMPT, ACTION_SCHEMA, REFLECT_PROMPT
 from tools import call_tool, get_tool_description, TOOL_REGISTRY
+from config import *
 
-
+model_manager = ModelManager()
 class ChatAgent:
     """
     实现思考-执行-反思循环。
@@ -12,8 +13,10 @@ class ChatAgent:
     """
     
     def __init__(self, task: str):
-        self.llm_json = llm_json
-        self.llm = local_chat
+        
+        self.llm_json = model_manager.llm_json
+        self.llm = model_manager.call_model(model_manager.get_model_options().get(MODEL_ING), [SYSTEM_PROMPT], "")
+        
         self.history = Memory()
         self.task = task
         self.max_steps = 10
@@ -44,10 +47,7 @@ class ChatAgent:
         prompt = self.build_prompt()
         
         # 调用LLM生成JSON格式的动作
-        result = self.llm_json([
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt}
-        ])
+        result = self.llm_json(prompt, SYSTEM_PROMPT)
         
         # 处理JSON解析错误
         if isinstance(result, tuple):
@@ -76,9 +76,7 @@ class ChatAgent:
             tool_name=tool_name,
             tool_args=tool_args
         )
-        return self.llm([
-            {"role": "user", "content": messages}
-        ], prefix="Reflecting: ")
+        return self.llm(messages)
     
     def execute(self, action: Dict[str, Any]) -> Tuple[Any, str, bool]:
         """执行步骤：调用工具并处理结果
