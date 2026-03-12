@@ -64,8 +64,8 @@ class Memory:
     提供短期记忆（最近对话）和长期记忆（总结）功能。
     """
     
-    def __init__(self, max_history: int = 100, persist_name: Optional[str] = None, 
-                 session_id: Optional[str] = None, messages: Optional[List[Dict[str, Any]]] = None):
+    def __init__(self, max_history: int = 100,  
+                 session_id: Optional[str] = None, user_input: Optional[str] = None):
         """初始化记忆系统
         
         参数:
@@ -74,28 +74,21 @@ class Memory:
             session_id: 会话ID，如果为None则自动生成
             messages: 初始消息列表，如果为None则为空列表
         """
-        self.history: List[Dict[str, Any]] = []  # 兼容旧接口：步骤历史记录
-        self.messages: List[Dict[str, Any]] = messages or []  # 完整的对话消息
+        self.history: List[Dict[str, Any]] = []  # 步骤历史记录
+        self.messages: List[Dict[str, Any]] = []  
         self.max_history = max_history
-        self.persist_name = persist_name
+
+        self.user_input = user_input
         
         # 生成会话ID
-        self.session_id = session_id or datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.session_id = session_id 
         
         # 生成会话摘要和文件名
-        self.summary = generate_session_summary(self.messages)
-        self.filename = create_session_filename(self.session_id, self.messages)
+        self.filename = create_session_filename(self.session_id, self.user_input)
         self.created_time = datetime.now().isoformat()
+        self.persist_path = f"session/{self.filename}"
         
-        # 设置持久化路径
-        if persist_name:
-            self.persist_path = f"session/{persist_name}"
-        else:
-            self.persist_path = f"session/{self.filename}"
-        
-        # 如果存在持久化文件，加载历史记录
-        if self.persist_path and os.path.exists(self.persist_path):
-            self.load()
+
     
     def add_conversation(self, conversation: Dict[str, Any]) -> None:
         """添加步骤历史记录（兼容旧接口）
@@ -120,13 +113,10 @@ class Memory:
             role: 角色（user/assistant）
             content: 消息内容
         """
-        self.messages.append({
+        self.history.append({
             "role": role,
             "content": content
         })
-        
-        # 更新会话摘要
-        self.summary = generate_session_summary(self.messages)
         
         # 自动保存
         if self.persist_path:
@@ -159,31 +149,11 @@ class Memory:
     def clear(self) -> None:
         """清空历史记录和消息"""
         self.history.clear()
-        self.messages.clear()
-        self.summary = ""
+    
         
         if self.persist_path:
             self.save()
-    
-    def set_summary(self, summary: str) -> None:
-        """设置记忆总结
-        
-        参数:
-            summary: 总结文本
-        """
-        self.summary = summary
-        
-        if self.persist_name:
-            self.save()
-    
-    def get_summary(self) -> str:
-        """获取记忆总结
-        
-        返回:
-            str: 总结文本
-        """
-        return self.summary
-    
+
     def get_messages(self, n: Optional[int] = None) -> List[Dict[str, Any]]:
         """获取对话消息
         
@@ -194,8 +164,8 @@ class Memory:
             List[Dict[str, Any]]: 对话消息列表
         """
         if n is None:
-            return self.messages
-        return self.messages[-n:]
+            return self.history
+        return self.history[-n:]
     
     def save(self) -> None:
         """保存记忆到文件"""
@@ -205,9 +175,7 @@ class Memory:
         data = {
             "session_id": self.session_id,
             "filename": self.filename,
-            "summary": self.summary,
-            "messages": self.messages,
-            "history": self.history,  # 兼容旧格式
+            "history": self.history,  
             "max_history": self.max_history,
             "created_time": self.created_time
         }
@@ -231,8 +199,6 @@ class Memory:
             # 加载新格式数据
             self.session_id = data.get("session_id", self.session_id)
             self.filename = data.get("filename", self.filename)
-            self.summary = data.get("summary", self.summary)
-            self.messages = data.get("messages", self.messages)
             self.created_time = data.get("created_time", self.created_time)
             
             # 兼容旧格式数据
