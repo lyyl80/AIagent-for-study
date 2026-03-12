@@ -70,7 +70,7 @@ class Memory:
         
         参数:
             max_history: 最大历史记录条数
-            persist_name: 持久化存储文件名，如果为None则不持久化
+            user_input: 用户输入
             session_id: 会话ID，如果为None则自动生成
             messages: 初始消息列表，如果为None则为空列表
         """
@@ -203,8 +203,6 @@ class Memory:
             self.session_id = data.get("session_id", self.session_id)
             self.filename = data.get("filename", self.filename)
             self.created_time = data.get("created_time", self.created_time)
-            
-            # 兼容旧格式数据
             self.history = data.get("history", self.history)
             self.max_history = data.get("max_history", self.max_history)
         except Exception as e:
@@ -219,7 +217,6 @@ class Memory:
         return {
             "session_id": self.session_id,
             "filename": self.filename,
-            "messages": self.messages,
             "history": self.history,
             "max_history": self.max_history,
             "created_time": self.created_time
@@ -241,7 +238,6 @@ class Memory:
                     try:
                         with open(f"{session_dir}/{file_name}", "r", encoding="utf-8") as f:
                             session_data = json.load(f)
-                            # 如果是旧格式，添加filename字段
                             if "filename" not in session_data:
                                 session_data["filename"] = file_name[:-5]
                             sessions_list.append(session_data)
@@ -250,7 +246,6 @@ class Memory:
                         sessions_list.append({
                             "filename": file_name[:-5],
                             "session_id": file_name[:-5].split('_')[0] if '_' in file_name else file_name[:-5],
-                            "summary": "无法加载摘要",
                             "created_time": "未知"
                         })
         
@@ -286,16 +281,13 @@ class Memory:
             # 从加载的数据创建Memory实例
             memory = Memory(
                 max_history=session_data.get("max_history", 100),
-                persist_name=os.path.basename(session_path),
                 session_id=session_data.get("session_id"),
-                messages=session_data.get("messages", [])
             )
             
             # 手动设置其他属性（因为load方法不会在初始化时调用）
             memory.filename = session_data.get("filename", memory.filename)
-            memory.summary = session_data.get("summary", memory.summary)
             memory.created_time = session_data.get("created_time", memory.created_time)
-            memory.history = session_data.get("history", memory.history)
+            memory.history=session_data.get("history", [])
             
             return memory
         except Exception as e:
