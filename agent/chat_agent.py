@@ -23,8 +23,9 @@ class ChatAgent:
         )
         self.history = Memory(user_input=user_input)
         self.task = task
+    
         self.max_steps = 10
-        self.debug = True  # 调试模式
+        self.debug = False  # 调试模式
         
     def build_prompt(self) -> str:
         """构建思考提示词

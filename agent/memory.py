@@ -16,7 +16,7 @@ def generate_session_summary(messages: List[Dict[str, Any]], max_length: int = 3
         str: 会话摘要
     """
     if not messages:
-        return "空会话"
+        return ""
     
     # 提取用户的问题作为摘要
     user_messages = [msg["content"] for msg in messages if msg["role"] == "user"]
