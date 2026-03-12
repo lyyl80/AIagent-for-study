@@ -81,10 +81,13 @@ class Memory:
         self.user_input = user_input
         
         # 生成会话ID
-        self.session_id = session_id 
+        self.session_id = session_id or datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        
+        # 创建初始消息列表用于生成文件名
+        initial_messages = [{"role": "user", "content": user_input}] if user_input else []
         
         # 生成会话摘要和文件名
-        self.filename = create_session_filename(self.session_id, self.user_input)
+        self.filename = create_session_filename(self.session_id, initial_messages)
         self.created_time = datetime.now().isoformat()
         self.persist_path = f"session/{self.filename}"
         
@@ -216,7 +219,6 @@ class Memory:
         return {
             "session_id": self.session_id,
             "filename": self.filename,
-            "summary": self.summary,
             "messages": self.messages,
             "history": self.history,
             "max_history": self.max_history,
@@ -306,4 +308,4 @@ class Memory:
     
     def __str__(self) -> str:
         """字符串表示"""
-        return f"Memory(session_id={self.session_id}, messages={len(self.messages)}, history={len(self.history)}, summary={len(self.summary)} chars)"
+        return f"Memory(session_id={self.session_id}, messages={len(self.messages)}, history={len(self.history)})"

@@ -35,33 +35,25 @@
 
 
 ```
-
 .
-
-├── main.py              # 主程序入口，命令行界面
-
-├── requirements.txt     # Python依赖包列表
-
-├── agent/               # 代理核心模块
-
+├── .env                    # 环境变量配置文件
+├── .gitignore             # Git忽略文件配置
+├── main.py                # 主程序入口，命令行界面
+├── README.md              # 项目说明文档（本文件）
+├── requirements.txt       # Python依赖包列表
+├── agent/                 # 代理核心模块
 │   ├── __init__.py
-
-│   ├── chat_agent.py   # 聊天代理实现
-
-│   └── memory.py       # 记忆管理模块
-
-├── tools/               # 工具集模块
-
+│   ├── chat_agent.py     # 聊天代理实现
+│   └── memory.py         # 记忆管理模块
+├── config/                # 配置文件目录
+├── llm/                   # 大语言模型相关模块
+├── logs/                  # 系统运行日志目录
+├── prompt/                # 提示词模板目录
+├── session/               # 会话数据目录
+├── tools/                 # 工具集模块
 │   ├── __init__.py
-
-│   └── ...              # 各种功能工具
-
-├── config/              # 配置文件目录
-
-│   └── ...              # 系统配置和参数
-
-└── README.md            # 项目说明文档（本文件）
-
+│   └── ...               # 各种功能工具
+└── __pycache__/          # Python字节码缓存目录
 ```
 
 
@@ -183,21 +175,13 @@ python main.py --no-color
 
 
 | 参数 | 缩写 | 描述 |
-
 |------|------|------|
-
 | `task` | - | 要执行的任务描述（单次任务模式） |
-
 | `--interactive` | `-i` | 进入交互模式 |
-
 | `--session` | `-s` | 会话文件路径 |
-
 | `--clear-session` | - | 清除会话历史 |
-
 | `--list-tools` | - | 列出所有可用工具 |
-
 | `--verbose` | `-v` | 显示详细输出 |
-
 | `--no-color` | - | 禁用颜色输出 |
 
 
@@ -355,4 +339,3 @@ python main.py --help
 
 
 **MARS AI Agent** - 一个用于学习、了解AI代理系统的项目，让学习更简单！
-
