@@ -135,23 +135,6 @@ def run_interactive_mode( verbose: bool = False):
                     else:
                         print("暂无步骤历史记录")
                     continue
-                case "messages":
-                    messages = agent.history.get_messages()
-                    if messages:
-                        for i, msg in enumerate(messages, 1):
-                            role = msg.get("role", "unknown")
-                            content = msg.get("content", "")[:100]
-                            print(f"{i}. [{role}]: {content}")
-                    else:
-                        print("暂无对话消息")
-                    continue
-                case "summary":
-                    summary = agent.history.get_summary()
-                    if summary:
-                        print(f"记忆总结: {summary}")
-                    else:
-                        print("暂无记忆总结")
-                    continue
                 case "list":
                     sessions = Memory.list_sessions()
                     if sessions:
@@ -194,9 +177,6 @@ def run_interactive_mode( verbose: bool = False):
                     
                     # 将代理的历史记录合并到当前记忆
                     # 注意：ChatAgent有自己的Memory实例，这里只添加步骤历史记录
-                    # 对话消息已经在上面通过add_message添加了
-                    
-                    # 如果需要，添加步骤历史记录
                     agent.history.add_conversation({
                         "input": {"tool": "user", "tool_args": {"message": user_input}},
                         "output": "任务执行完成",

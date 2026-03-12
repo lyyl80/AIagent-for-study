@@ -89,7 +89,7 @@ class Memory:
         # 生成会话摘要和文件名
         self.filename = create_session_filename(self.session_id, initial_messages)
         self.created_time = datetime.now().isoformat()
-        self.persist_path = f"session/{self.filename}"
+        self.persist_path = f"session/{self.filename}.json"
         
 
     

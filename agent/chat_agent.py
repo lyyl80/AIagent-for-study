@@ -51,9 +51,6 @@ class ChatAgent:
         """
         prompt = self.build_prompt()
         
-        if self.debug:
-            print(f"[DEBUG] Prompt length: {len(prompt)} chars")
-            print(f"[DEBUG] Prompt preview: {prompt[:300]}...")
         
         # 调用LLM生成JSON格式的动作
         result = self.llm_json( prompt, SYSTEM_PROMPT)
