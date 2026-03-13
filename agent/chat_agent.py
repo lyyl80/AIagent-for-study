@@ -4,8 +4,42 @@ from agent.memory import Memory
 from prompt.templates import SYSTEM_PROMPT, THINK_PROMPT, ACTION_SCHEMA, REFLECT_PROMPT
 from tools import call_tool, get_tool_description, TOOL_REGISTRY
 from config import *
+import sys
+import time
+import threading
 
 model_manager = ModelManager()
+
+class Spinner:
+    """旋转动画类，在思考时显示动画效果"""
+    def __init__(self, message="Thinking: "):
+        self.message = message
+        self.stop_spinning = threading.Event()
+        self.spinner_thread = None
+
+    def spin(self):
+        spinner_chars = "|/-\\"
+        idx = 0
+        while not self.stop_spinning.is_set():
+            sys.stdout.write(f"\r{self.message}{spinner_chars[idx % len(spinner_chars)]}")
+            sys.stdout.flush()
+            time.sleep(0.1)
+            idx += 1
+
+    def start(self):
+        if self.spinner_thread is None or not self.spinner_thread.is_alive():
+            self.spinner_thread = threading.Thread(target=self.spin)
+            self.spinner_thread.daemon = True  # 守护线程，主线程退出时该线程也退出
+            self.spinner_thread.start()
+
+    def stop(self):
+        if self.spinner_thread and self.spinner_thread.is_alive():
+            self.stop_spinning.set()
+            self.spinner_thread.join()
+            sys.stdout.write("\r")  # 清空当前行
+            sys.stdout.flush()
+
+
 class ChatAgent:
     """
     实现思考-执行-反思循环。
@@ -52,9 +86,16 @@ class ChatAgent:
         """
         prompt = self.build_prompt()
         
+        # 创建并启动旋转动画
+        spinner = Spinner()
+        spinner.start()
         
-        # 调用LLM生成JSON格式的动作
-        result = self.llm_json( prompt, SYSTEM_PROMPT)
+        try:
+            # 调用LLM生成JSON格式的动作
+            result = self.llm_json( prompt, SYSTEM_PROMPT)
+        finally:
+            # 确保无论发生什么情况都会停止动画
+            spinner.stop()
         
         
         if self.debug:
