@@ -69,7 +69,7 @@ def list_tools():
     print("=== 可用工具 ===")
     tools = list_tools()
     for tool in tools:
-        print(f"  • {tool}")
+        print(f"  * {tool}")
     print("\n=== 工具描述 ===")
     print(get_tool_description())
 def run_interactive_mode( verbose: bool = False):

@@ -91,24 +91,72 @@ class ChatAgent:
         spinner.start()
         
         try:
-            # 调用LLM生成JSON格式的动作
-            result = self.llm_json( prompt, SYSTEM_PROMPT)
+            # 调用LLM生成JSON格式的动作（带重试机制）
+            result = self.llm_json(prompt, SYSTEM_PROMPT)
         finally:
             # 确保无论发生什么情况都会停止动画
             spinner.stop()
-        
         
         if self.debug:
             print(f"[DEBUG] Raw result type: {type(result)}")
             print(f"[DEBUG] Raw result: {result}")
         
-        # 处理JSON解析错误
+        # 处理JSON解析错误（新的错误格式）
         if isinstance(result, tuple):
             error_data, raw_response = result
-            print(f"JSON解析错误: {error_data.get('error', '未知错误')}")
-            print(f"原始响应: {raw_response[:200]}...")
-            # 返回finish动作以结束任务
-            return {"action": {"tool": "finish"}}
+            error_msg = error_data.get('error', '未知错误')
+            print(f"JSON解析失败: {error_msg}")
+            
+            # 根据错误类型采取不同策略
+            if "重试后" in error_msg:
+                # 多次重试后仍然失败，尝试简化任务或请求用户帮助
+                print("多次重试后仍然无法解析JSON，尝试简化请求...")
+                # 返回一个talk动作询问用户或尝试简单操作
+                return {
+                    "action": {
+                        "tool": "talk",
+                        "tool_args": {
+                            "message": f"抱歉，系统在处理您的请求时遇到技术问题（{error_msg}）。请尝试简化您的请求或重新表述。"
+                        }
+                    }
+                }
+            else:
+                # 其他错误，同样使用talk工具
+                return {
+                    "action": {
+                        "tool": "talk",
+                        "tool_args": {
+                            "message": f"处理请求时遇到错误：{error_msg}。请检查您的请求格式或重试。"
+                        }
+                    }
+                }
+        
+        # 验证返回的JSON结构
+        if not isinstance(result, dict):
+            print(f"警告：LLM返回了非字典类型: {type(result)}")
+            # 尝试包装或返回默认动作
+            if isinstance(result, str) and len(result) > 0:
+                # 可能是直接的文本响应，使用talk工具
+                return {
+                    "action": {
+                        "tool": "talk",
+                        "tool_args": {
+                            "message": result[:500]  # 限制长度
+                        }
+                    }
+                }
+            else:
+                # 返回默认的继续动作
+                return {"action": {"tool": "talk", "tool_args": {"message": "继续执行任务"}}}
+        
+        # 确保有action字段
+        if "action" not in result:
+            # 如果没有action字段，尝试使用整个结果作为action
+            if "tool" in result:
+                return {"action": result}
+            else:
+                print(f"警告：LLM返回的JSON缺少action字段: {result}")
+                return {"action": {"tool": "talk", "tool_args": {"message": "请提供具体的操作指令"}}}
         
         return result
     
@@ -131,14 +179,14 @@ class ChatAgent:
         )
         return self.llm(messages)
     
-    def execute(self, action: Dict[str, Any]) -> Tuple[Any, str, bool]:
+    def execute(self, action: Dict[str, Any]) -> Tuple[Any, str, bool, bool]:
         """执行步骤：调用工具并处理结果
         
         参数:
             action: 动作字典，包含tool和tool_args
             
         返回:
-            Tuple[结果, 工具名称, 是否需要用户输入]
+            Tuple[结果, 工具名称, 是否需要用户输入, 是否执行失败]
         """
         tool = action.get("tool")
         tool_args = action.get("tool_args", {})
@@ -146,7 +194,9 @@ class ChatAgent:
         # 验证工具是否存在
         if tool not in TOOL_REGISTRY:
             tool_name = tool if isinstance(tool, str) else "unknown"
-            return ("Invalid tool", tool_name, False)
+            error_msg = f"Invalid tool: {tool_name}"
+            print(f"错误: {error_msg}")
+            return (error_msg, tool_name, False, True)
         
         # 打印工具调用信息（talk工具除外）
         if tool != "talk":
@@ -157,7 +207,26 @@ class ChatAgent:
                     print(f"  Args: {args_str}")
         
         # 调用工具
-        result = call_tool(tool, **tool_args)
+        try:
+            result = call_tool(tool, **tool_args)
+        except Exception as e:
+            error_msg = f"工具调用异常: {str(e)}"
+            print(f"错误: {error_msg}")
+            return (error_msg, tool, False, True)
+        
+        # 标准化错误检测
+        failed = False
+        if isinstance(result, str):
+            # 检查常见错误模式
+            error_patterns = [
+                "Error:", "错误:", "失败:", "失败：", "Invalid", "invalid",
+                "File not found", "文件不存在", "No such file", "找不到文件",
+                "Missing", "缺少", "not found", "未找到"
+            ]
+            
+            if any(pattern in result for pattern in error_patterns):
+                failed = True
+                print(f"工具执行失败: {result[:200]}")
         
         # 处理工具结果
         if tool == "talk":
@@ -170,52 +239,140 @@ class ChatAgent:
                  "需要什么", "需要哪些", "吗", "呢", "如何", "什么", "哪些", "谁", "哪里"])
         else:
             # 打印其他工具的结果（截断长输出）
-            if result and len(str(result)) > 200:
+            if failed:
+                # 失败时显示完整错误信息
+                print(f"Result: {result}")
+            elif result and len(str(result)) > 200:
                 print(f"Result: {str(result)[:200]}...")
             else:
                 print(f"Result: {result}")
             need_user_input = False
         
-        return (result, tool, need_user_input)
+        return (result, tool, need_user_input, failed)
     
     def step(self) -> Tuple[Dict[str, Any], bool]:
-        """单步执行：思考→执行→反思
+        """单步执行：思考→执行→反思（优化版）
         
         返回:
             Tuple[动作字典, 是否需要用户输入]
         """
         raw_action = self.think()
         inner_action = raw_action.get("action", raw_action)
+        tool_name = inner_action.get("tool", "")
         
-        # 对于finish和talk工具，跳过反思
-        if inner_action.get("tool") in ["finish", "talk"]:
-            result, tool, need_user_input = self.execute(inner_action)
+        # 执行工具
+        result, tool, need_user_input, failed = self.execute(inner_action)
+        
+        # 决定是否需要反思（优化反思频率）
+        should_reflect = False
+        
+        # 反思条件：
+        # 1. 工具执行失败
+        # 2. 关键操作（文件写入、内容替换）
+        # 3. 每3步反思一次（避免过度反思）
+        # 4. 用户明确询问或需要输入
+        key_tools = ["write_file", "replace_content", "shell"]
+        
+        if failed:
+            should_reflect = True
+            print("工具执行失败，进行反思分析...")
+        elif tool_name in key_tools:
+            should_reflect = True
+            print(f"关键操作 {tool_name}，进行反思...")
+        elif len(self.history) % 3 == 0 and tool_name not in ["finish", "talk"]:
+            should_reflect = True
+            print("定期反思检查...")
+        elif need_user_input:
+            should_reflect = True
+            print("需要用户输入，进行反思...")
+        
+        # 对于finish工具，不进行反思
+        if tool_name == "finish":
+            should_reflect = False
+        
+        # 执行反思（如果需要）
+        if should_reflect and tool_name != "talk":
+            try:
+                reflect = self.reflect(
+                    result,
+                    tool_name,
+                    inner_action.get("tool_args", {})
+                )
+                self.history.add_conversation({
+                    "input": inner_action,
+                    "output": result,
+                    "reflect": reflect,
+                    "failed": failed
+                })
+            except Exception as e:
+                print(f"反思步骤出错: {str(e)}")
+                self.history.add_conversation({
+                    "input": inner_action,
+                    "output": result,
+                    "reflect": f"反思出错: {str(e)}",
+                    "failed": failed
+                })
+        else:
+            # 不进行反思，直接记录
             self.history.add_conversation({
                 "input": inner_action,
-                "output": result
+                "output": result,
+                "failed": failed
             })
-            return inner_action, need_user_input
         
-        # 对于其他工具，执行完整的思考-执行-反思循环
-        result, tool, need_user_input = self.execute(inner_action)
-        reflect = self.reflect(
-            result,
-            inner_action.get("tool"),
-            inner_action.get("tool_args", {})
-        )
-        self.history.add_conversation({
-            "input": inner_action,
-            "output": result,
-            "reflect": reflect
-        })
         return inner_action, need_user_input
     
     def run(self) -> None:
-        """运行代理循环"""
+        """运行代理循环（带进度跟踪和停滞检测）"""
         print(f"Task: {self.task}")
         
+        # 进度跟踪变量
+        consecutive_failures = 0
+        max_consecutive_failures = 3
+        no_progress_steps = 0
+        max_no_progress_steps = 5
+        last_successful_action = None
+        
         for step_num in range(self.max_steps):
+            if self.debug:
+                print(f"[DEBUG] Step {step_num + 1}/{self.max_steps}")
+                print(f"[DEBUG] Failures: {consecutive_failures}, No-progress: {no_progress_steps}")
+            
             action, need_user_input = self.step()
+            
+            # 检查步骤是否失败（从历史记录中获取）
+            recent_history = self.history.get_recent_steps(1)
+            if recent_history:
+                last_step = recent_history[0]
+                failed = last_step.get("failed", False)
+                
+                # 更新失败计数器
+                if failed:
+                    consecutive_failures += 1
+                    print(f"警告：连续失败次数: {consecutive_failures}/{max_consecutive_failures}")
+                    
+                    # 如果连续失败次数过多，尝试调整策略
+                    if consecutive_failures >= max_consecutive_failures:
+                        print("连续失败次数过多，尝试调整策略...")
+                        self._adjust_strategy()
+                        consecutive_failures = 0  # 重置计数器
+                else:
+                    # 成功执行，重置失败计数器
+                    consecutive_failures = 0
+                    last_successful_action = action
+                    
+                    # 检查进度停滞
+                    if last_successful_action and action == last_successful_action:
+                        no_progress_steps += 1
+                    else:
+                        no_progress_steps = 0
+                        last_successful_action = action
+                
+                # 停滞检测
+                if no_progress_steps >= max_no_progress_steps:
+                    print("检测到进度停滞，尝试不同方法...")
+                    self._handle_stagnation()
+                    no_progress_steps = 0
             
             # 检查是否完成任务
             if action.get("tool") == "finish":
@@ -224,9 +381,78 @@ class ChatAgent:
             
             # 如果需要用户输入，获取并添加到历史记录
             if need_user_input:
-                user_input = input("You: ")
-                self.history.add_conversation({
-                    "input": {"tool": "user", "tool_args": {"message": user_input}},
-                    "output": user_input,
-                    "reflect": "用户输入"
-                })
+                try:
+                    user_input = input("You: ")
+                    self.history.add_conversation({
+                        "input": {"tool": "user", "tool_args": {"message": user_input}},
+                        "output": user_input,
+                        "reflect": "用户输入"
+                    })
+                except (KeyboardInterrupt, EOFError):
+                    print("\n用户中断输入")
+                    # 添加中断记录
+                    self.history.add_conversation({
+                        "input": {"tool": "user", "tool_args": {"message": "[用户中断]"}},
+                        "output": "[用户中断]",
+                        "reflect": "用户中断输入"
+                    })
+                    break
+        
+        # 循环结束检查
+        if step_num == self.max_steps - 1:
+            print(f"达到最大步骤限制 ({self.max_steps})，任务可能未完成")
+            # 添加一个finish动作
+            self.history.add_conversation({
+                "input": {"tool": "finish", "tool_args": {"response": f"达到最大步骤限制 ({self.max_steps})"}},
+                "output": "任务因步骤限制而结束"
+            })
+    
+    def _adjust_strategy(self):
+        """调整执行策略"""
+        print("调整策略：尝试简化任务或请求用户帮助...")
+        
+        # 添加到历史记录
+        self.history.add_conversation({
+            "input": {"tool": "talk", "tool_args": {"message": "连续多次操作失败，正在调整策略..."}},
+            "output": "策略调整",
+            "reflect": "连续失败后调整策略"
+        })
+        
+        # 可能的策略调整：
+        # 1. 尝试不同的工具或方法
+        # 2. 简化当前任务
+        # 3. 请求用户提供更多信息
+        # 这里使用talk工具询问用户
+        return {
+            "action": {
+                "tool": "talk",
+                "tool_args": {
+                    "message": "连续多次操作失败。请提供更多详细信息，或尝试简化您的请求。"
+                }
+            }
+        }
+    
+    def _handle_stagnation(self):
+        """处理进度停滞"""
+        print("处理停滞：尝试不同的方法...")
+        
+        # 添加到历史记录
+        self.history.add_conversation({
+            "input": {"tool": "talk", "tool_args": {"message": "检测到进度停滞，尝试不同方法..."}},
+            "output": "停滞处理",
+            "reflect": "进度停滞后调整方法"
+        })
+        
+        # 可能的停滞处理：
+        # 1. 回顾历史，尝试不同的工具
+        # 2. 重新分析任务
+        # 3. 请求用户指导
+        # 这里使用talk工具询问用户
+        return {
+            "action": {
+                "tool": "talk",
+                "tool_args": {
+                    "message": "检测到进度停滞。是否需要调整方向或提供其他信息？"
+                }
+            }
+        }

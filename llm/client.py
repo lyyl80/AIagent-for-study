@@ -109,26 +109,80 @@ class ModelManager:
             return full_content
         except Exception as e:
             return f"本地模型调用失败: {str(e)}"
-    def llm_json(self, messages, system_prompt):
+    def llm_json(self, messages, system_prompt, max_retries=3):
         # 如果messages是字符串，转换为消息列表
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
-        response = self.call_model(self.get_model_by_key(MODEL_ING), messages, system_prompt,output=False)
-        # 清理代码块
+        
+        for attempt in range(max_retries):
+            try:
+                # 如果是重试，增强提示词要求严格的JSON格式
+                current_messages = messages.copy()
+                if attempt > 0:
+                    # 增强提示：要求纯JSON格式
+                    enhanced_content = current_messages[0]["content"] + "\n\n重要：请返回纯JSON格式，不要包含任何其他文本、解释或代码块标记。确保JSON格式完全正确。"
+                    current_messages = [{"role": "user", "content": enhanced_content}]
+                
+                response = self.call_model(self.get_model_by_key(MODEL_ING), current_messages, system_prompt, output=False)
+                
+                # 增强的JSON清理逻辑
+                cleaned = self._clean_json_response(response)
+                
+                # 尝试解析JSON
+                json_data = json.loads(cleaned)
+                return json_data
+                
+            except json.JSONDecodeError as e:
+                if attempt < max_retries - 1:
+                    print(f"JSON解析失败，第{attempt + 1}次重试...")
+                    continue
+                else:
+                    print(f"JSON解析失败（{max_retries}次重试后）: {str(e)}")
+                    print(f"清理后的响应: {cleaned[:200]}...")
+                    return {"error": f"LLM返回的内容不是有效的JSON（{max_retries}次重试后）", "raw_response": response}, response
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"调用失败，第{attempt + 1}次重试...")
+                    continue
+                else:
+                    return {"error": f"模型调用失败: {str(e)}", "raw_response": ""}, ""
+    
+    def _clean_json_response(self, response):
+        """清理LLM响应，提取JSON内容"""
         cleaned = response.strip()
-        if cleaned.startswith("``json"):
-            cleaned = cleaned[7:]  # 移除 ```json
-        if cleaned.startswith("```"):
-            cleaned = cleaned[3:]  # 移除 ```
-        if cleaned.endswith("````"):
-            cleaned = cleaned[:-4]  # 移除结尾的 ````
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3]  # 移除结尾的 ```
+        
+        # 移除各种可能的代码块标记
+        json_markers = [
+            ("```json\n", "\n```"),
+            ("```json", "```"),
+            ("```JSON\n", "\n```"),
+            ("```JSON", "```"),
+            ("```\n", "\n```"),
+            ("```", "```"),
+            ("`json\n", "\n`"),
+            ("`json", "`"),
+            ("`JSON\n", "\n`"),
+            ("`JSON", "`"),
+            ("`", "`"),
+        ]
+        
+        for start_marker, end_marker in json_markers:
+            if cleaned.startswith(start_marker) and cleaned.endswith(end_marker):
+                cleaned = cleaned[len(start_marker):-len(end_marker)]
+                break
+        
+        # 移除可能的Markdown格式
         cleaned = cleaned.strip()
-        try:
-            json_data = json.loads(cleaned)
-            # 返回解析后的JSON和原始响应
-            return json_data
-        except json.JSONDecodeError:
-            return {"error": "LLM返回的内容不是有效的JSON", "raw_response": response}, response
+        
+        # 如果响应以{开头，}结尾，尝试提取最外层的JSON对象
+        start_idx = cleaned.find('{')
+        end_idx = cleaned.rfind('}')
+        
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            cleaned = cleaned[start_idx:end_idx+1]
+        
+        # 移除可能的前后空白字符
+        cleaned = cleaned.strip()
+        
+        return cleaned
 

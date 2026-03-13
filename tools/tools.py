@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import platform
 
 
 def read_file_tool(**kwargs):
@@ -53,23 +54,62 @@ def read_file_tool(**kwargs):
         return f"Error reading file: {str(e)}"
 
 def write_file_tool(**kwargs):
-   """
-   写入文件内容
-   :param file_path: 文件路径 (也接受 path 参数)
-   :param content: 文件内容字符串
-   :return: None
-   """
-   try:
-    file_path = kwargs.get("file_path") or kwargs.get("path")
-    content = kwargs["content"]
-    if not file_path:
-        return "Error: Missing file path parameter (file_path or path)"
-    with open(file_path, 'w', encoding='utf-8') as file:
-        file.write(content)
-    return f"Successfully wrote to file: {file_path}"
-   except Exception as e:
-    print(e)
-    return "Error writing file"
+    """
+    写入文件内容
+    :param file_path: 文件路径 (也接受 path 参数)
+    :param content: 文件内容字符串
+    :return: None
+    """
+    try:
+        file_path = kwargs.get("file_path") or kwargs.get("path")
+        content = kwargs["content"]
+        if not file_path:
+            return "Error: Missing file path parameter (file_path or path)"
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+        return f"Successfully wrote to file: {file_path}"
+    except Exception as e:
+        print(e)
+        return "Error writing file"
+
+def convert_unix_to_windows(command):
+    """将常见Unix命令转换为Windows兼容命令"""
+    # 简单命令映射
+    unix_to_win_map = {
+        "ls": "dir",
+        "ls -la": "dir",
+        "ls -l": "dir",
+        "pwd": "cd",
+        "rm ": "del ",
+        "rm -rf ": "rmdir /s /q ",
+        "rm -r ": "rmdir /s ",
+        "rmdir ": "rmdir ",
+        "mkdir -p ": "mkdir ",
+        "cp ": "copy ",
+        "cp -r ": "xcopy /e /i ",
+        "mv ": "move ",
+        "find ": "dir /s /b ",
+        "grep ": "findstr ",
+        "cat ": "type ",
+        "touch ": "type nul > ",
+    }
+    
+    # 检查是否需要转换
+    original_cmd = command.strip()
+    lower_cmd = original_cmd.lower()
+    
+    # 查找匹配的Unix命令
+    for unix_cmd, win_cmd in unix_to_win_map.items():
+        if lower_cmd.startswith(unix_cmd):
+            # 替换命令，保留参数
+            remaining = original_cmd[len(unix_cmd):]
+            converted = win_cmd + remaining
+            print(f"命令转换: '{original_cmd}' -> '{converted}'")
+            return converted
+    
+    # 没有需要转换的命令，返回原命令
+    return original_cmd
+
 
 def run_shell(**kwargs):
     """
@@ -81,69 +121,41 @@ def run_shell(**kwargs):
     """
     try:
         command = kwargs["command"]
-        timeout = kwargs.get("timeout", 30)  # 默认30秒超时
+        timeout = kwargs.get("timeout", 30)
         cwd = kwargs.get("cwd")
         
-        # 使用subprocess.run，它可以更好地处理编码问题
-        if sys.platform.startswith('win'):
-            # 对于Windows，使用系统默认编码
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=False,  # 返回bytes，以便我们可以手动解码
-                timeout=timeout,
-                cwd=cwd
-            )
-            
-            # 尝试多种编码方式
-            try:
-                # 尝试使用cp936 (GBK的超集) 解码Windows输出
-                output = result.stdout.decode('cp936')
-                error_output = result.stderr.decode('cp936')
-            except UnicodeDecodeError:
-                try:
-                    # 如果失败，尝试UTF-8
-                    output = result.stdout.decode('utf-8')
-                    error_output = result.stderr.decode('utf-8')
-                except UnicodeDecodeError:
-                    # 最后尝试使用错误忽略方式
-                    output = result.stdout.decode('utf-8', errors='replace')
-                    error_output = result.stderr.decode('utf-8', errors='replace')
-        else:
-            # 对于Unix/Linux/macOS系统
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=False,
-                timeout=timeout,
-                cwd=cwd
-            )
-            output = result.stdout.decode('utf-8', errors='replace')
-            error_output = result.stderr.decode('utf-8', errors='replace')
-
-        # 检查命令是否成功执行
-        if result.returncode != 0:
-            # 如果错误信息包含"已经存在"，添加额外提示
-            if "已经存在" in error_output or "already exists" in error_output.lower():
-                error_output += " (目录/文件已存在，建议直接在该路径下操作，不要重复创建)"
-            return f"Command failed with exit code {result.returncode}: {error_output}"
-
-        # 截断过长输出，避免上下文溢出
-        if len(output) > 2000:
-            output = output[:2000] + "\n... (output truncated)"
+        # 环境自适应：转换常见Unix命令为Windows命令
+        current_os = platform.system()
+        if current_os == "Windows":
+            command = convert_unix_to_windows(command)
         
-        return output
+        # 简化版本：直接使用subprocess.run
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            timeout=timeout,
+            cwd=cwd
+        )
+        
+        if result.returncode != 0:
+            return f"Command failed with exit code {result.returncode}: {result.stderr}"
+        
+        # 截断过长输出
+        if len(result.stdout) > 2000:
+            return result.stdout[:2000] + "\n... (output truncated)"
+        
+        return result.stdout
         
     except subprocess.TimeoutExpired:
         return f"Command timed out after {timeout} seconds"
     except subprocess.CalledProcessError as e:
         return f"Error executing command: {str(e)}"
-    except UnicodeDecodeError as e:
-        return f"Error decoding command output: {str(e)}"
     except Exception as e:
-        return f"Unexpected error executing command: {str(e)}"
+        return f"Unexpected error: {str(e)}"
 
 def talk_tool(**kwargs):
    """
