@@ -24,7 +24,7 @@ class ChatAgent:
         self.history = Memory(user_input=user_input)
         self.task = task
     
-        self.max_steps = 10
+        self.max_steps = 100
         self.debug = False  # 调试模式
         
     def build_prompt(self) -> str:
@@ -55,6 +55,7 @@ class ChatAgent:
         
         # 调用LLM生成JSON格式的动作
         result = self.llm_json( prompt, SYSTEM_PROMPT)
+        
         
         if self.debug:
             print(f"[DEBUG] Raw result type: {type(result)}")
