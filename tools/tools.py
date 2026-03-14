@@ -168,9 +168,69 @@ def replace_content_tool(**kwargs):
         print(e)
         return f"Error replacing content in file: {str(e)}"
 
+def web_content_tool(**kwargs):
+    """
+    获取指定网页的内容
+    :param url: 网页URL地址
+    :return: 网页内容的纯文本
+    """
+    try:
+        url = kwargs["url"]
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # 使用BeautifulSoup解析网页内容
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # 移除脚本和样式元素
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # 提取网页正文内容
+        content_tags = ['main', 'article', '.content', '#content', 'div.content', '.post', '.entry', 'div.post', 'div.entry']
+        content = None
+        
+        for tag in content_tags:
+            content = soup.select_one(tag)
+            if content:
+                break
+        
+        # 如果没有找到指定的内容区域，就使用body标签的内容
+        if not content:
+            body = soup.find('body')
+            if body:
+                content = body
+            else:
+                content = soup
+        
+        # 获取文本内容并清理
+        text = content.get_text()
+        
+        # 清理文本 - 去除多余的空白字符
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = ' '.join(chunk for chunk in chunks if chunk)
+        
+        # 限制返回内容长度，防止输出过长
+        max_length = 2000
+        if len(text) > max_length:
+            text = text[:max_length] + "\n... (内容已截断)"
+        
+        return text
+        
+    except requests.RequestException as e:
+        return f"网络请求错误: {str(e)}"
+    except Exception as e:
+        return f"获取网页内容时发生错误: {str(e)}"
+
+
 def web_search_tool(**kwargs):
     """
-    使用谷歌搜索
+    使用必应(Bing)搜索
     :param query: 搜索查询字符串
     :return: 搜索结果
     """
@@ -179,41 +239,34 @@ def web_search_tool(**kwargs):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
-        url = f"https://www.google.com/search?q={query}"
+        # 将百度搜索更换为必应搜索
+        url = f"https://www.bing.com/search?q={query}"
         response = requests.get(url, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # 提取搜索结果标题和链接
+        # 提取必应搜索结果标题和链接
         search_results = []
-        for g in soup.find_all('div', class_='g'):
-            anchor = g.find('a')
-            if anchor and anchor.get('href'):
-                link = anchor['href']
-                title_elem = g.find('h3')
-                title = title_elem.text if title_elem else "No title found"
-                search_results.append({
-                    "title": title,
-                    "link": link
-                })
-        
-        # 如果上面的方法没找到结果，尝试另一种选择器
-        if not search_results:
-            for r in soup.find_all('div', class_='r'):
-                anchor = r.find('a')
-                if anchor and anchor.get('href'):
-                    link = anchor['href']
-                    title_elem = r.find('h3')
-                    title = title_elem.text if title_elem else "No title found"
+        for result in soup.find_all('li', class_='b_algo'):
+            title_elem = result.find('h2')
+            if title_elem:
+                title = title_elem.text.strip()
+                link_elem = result.find('a', href=True)
+                if link_elem:
+                    link = link_elem['href']
+                    # 获取摘要信息
+                    desc_elem = result.find('p')
+                    desc = desc_elem.text.strip() if desc_elem else ""
                     search_results.append({
                         "title": title,
-                        "link": link
+                        "link": link,
+                        "desc": desc
                     })
 
         if search_results:
             result_str = ""
             for i, result in enumerate(search_results[:5], 1):  # 只返回前5个结果
-                result_str += f"{i}. {result['title']}\n   Link: {result['link']}\n"
+                result_str += f"{i}. {result['title']}\n   Link: {result['link']}\n   Description: {result['desc']}\n"
             return result_str.strip()
         else:
             return "未能找到搜索结果，请稍后再试。"
