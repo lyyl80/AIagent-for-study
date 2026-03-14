@@ -23,7 +23,7 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
     ),
     "shell": (
         run_shell,
-        "运行shell命令。参数: command - 要执行的命令字符串，可选: timeout - 超时时间(秒，默认30)，cwd - 工作目录",
+        "运行shell命令。参数: command - 要执行的命令字符串，可选: timeout - 超时时间(秒，默认30)，cwd - 工作目录,执行系统为windows的cmd或powershell",
         {
             "required_params": ["command"],
             "optional_params": ["timeout", "cwd"]

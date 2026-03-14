@@ -72,45 +72,6 @@ def write_file_tool(**kwargs):
         print(e)
         return "Error writing file"
 
-def convert_unix_to_windows(command):
-    """将常见Unix命令转换为Windows兼容命令"""
-    # 简单命令映射
-    unix_to_win_map = {
-        "ls": "dir",
-        "ls -la": "dir",
-        "ls -l": "dir",
-        "pwd": "cd",
-        "rm ": "del ",
-        "rm -rf ": "rmdir /s /q ",
-        "rm -r ": "rmdir /s ",
-        "rmdir ": "rmdir ",
-        "mkdir -p ": "mkdir ",
-        "cp ": "copy ",
-        "cp -r ": "xcopy /e /i ",
-        "mv ": "move ",
-        "find ": "dir /s /b ",
-        "grep ": "findstr ",
-        "cat ": "type ",
-        "touch ": "type nul > ",
-    }
-    
-    # 检查是否需要转换
-    original_cmd = command.strip()
-    lower_cmd = original_cmd.lower()
-    
-    # 查找匹配的Unix命令
-    for unix_cmd, win_cmd in unix_to_win_map.items():
-        if lower_cmd.startswith(unix_cmd):
-            # 替换命令，保留参数
-            remaining = original_cmd[len(unix_cmd):]
-            converted = win_cmd + remaining
-            print(f"命令转换: '{original_cmd}' -> '{converted}'")
-            return converted
-    
-    # 没有需要转换的命令，返回原命令
-    return original_cmd
-
-
 def run_shell(**kwargs):
     """
     执行shell命令
@@ -123,11 +84,6 @@ def run_shell(**kwargs):
         command = kwargs["command"]
         timeout = kwargs.get("timeout", 30)
         cwd = kwargs.get("cwd")
-        
-        # 环境自适应：转换常见Unix命令为Windows命令
-        current_os = platform.system()
-        if current_os == "Windows":
-            command = convert_unix_to_windows(command)
         
         # 简化版本：直接使用subprocess.run
         result = subprocess.run(
