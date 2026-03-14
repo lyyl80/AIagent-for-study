@@ -269,7 +269,7 @@ class ChatAgent:
         elif tool_name in key_tools:
             should_reflect = True
             print(f"关键操作 {tool_name}，进行反思...")
-        elif len(self.history) % 3 == 0 and tool_name not in ["finish", "talk"]:
+        elif len(self.history) % 5 == 0 and tool_name not in ["finish", "talk"]:
             should_reflect = True
             print("定期反思检查...")
         elif need_user_input:

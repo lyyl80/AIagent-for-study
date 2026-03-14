@@ -47,7 +47,7 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
     ),
     "web_search": (
         web_search_tool,
-        "使用谷歌搜索。参数: query - 搜索查询字符串",
+        "使用网络搜索,尽量搜索文字类网站。参数: query - 搜索查询字符串",
         {
             "required_params": ["query"],
             "optional_params": []
@@ -55,9 +55,12 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
     ),
     "web_content":(
         web_content_tool,
-        "获取网页内容。参数: url - 要获取内容的网址",
+       """获取网页内容,尽量是文字类网站。参数: urls - 要获取内容的网址列表[
+    "https://example.com/page1",
+    "https://example.com/page2",
+    "https://example.com/page3"]""",
         {
-            "required_params": ["url"],
+            "required_params": ["urls"],
             "optional_params": []
         }
     ),

@@ -172,12 +172,22 @@ def replace_content_tool(**kwargs):
 
 def web_content_tool(**kwargs):
     """
-    获取指定网页的内容
-    :param url: 网页URL地址
-    :return: 网页内容的纯文本
+    获取一个或多个指定网页的内容并拼接返回
+    :param urls: 网页URL地址列表 (也接受单个url参数)
+    :return: 所有网页内容拼接后的纯文本
     """
     try:
-        url = kwargs["url"]
+        # 支持单个URL或URL列表
+        urls = kwargs.get("urls")
+        if isinstance(urls, str):
+            urls = [urls]
+        elif not isinstance(urls, list):
+            return "错误: 请提供一个URL字符串或URL列表"
+        
+        if not urls:
+            return "错误: 未提供任何URL"
+        
+        all_content = []
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -188,75 +198,98 @@ def web_content_tool(**kwargs):
             "Upgrade-Insecure-Requests": "1",
         }
         
-        # 发送请求获取网页内容
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        # 尝试检测并设置正确的编码
-        detected_encoding = chardet.detect(response.content)
-        if detected_encoding and detected_encoding['encoding']:
-            # 使用检测到的编码重新解码内容
-            decoded_content = response.content.decode(detected_encoding['encoding'])
-        else:
-            # 如果检测不到编码，尝试常用中文编码
+        for i, original_url in enumerate(urls, 1):
             try:
-                decoded_content = response.content.decode('utf-8')
-            except UnicodeDecodeError:
-                try:
-                    decoded_content = response.content.decode('gbk')
-                except UnicodeDecodeError:
-                    decoded_content = response.content.decode('gb2312', errors='ignore')
+                # 处理百度跳转链接
+                url = original_url
+                if "baidu.com/link" in original_url or "baidu.com" in original_url and "url=" in original_url:
+                    # 百度跳转链接，需要先获取真实URL
+                    try:
+                        response = requests.get(original_url, headers=headers, timeout=10, allow_redirects=True)
+                        # 检查重定向后的最终URL
+                        url = response.url
+                    except Exception as e:
+                        # 如果重定向失败，仍然尝试原链接
+                        url = original_url
+                
+                # 发送请求获取网页内容
+                response = requests.get(url, headers=headers, timeout=10)
+                response.raise_for_status()
+                
+                # 尝试检测并设置正确的编码
+                detected_encoding = chardet.detect(response.content)
+                if detected_encoding and detected_encoding['encoding']:
+                    # 使用检测到的编码重新解码内容
+                    decoded_content = response.content.decode(detected_encoding['encoding'])
+                else:
+                    # 如果检测不到编码，尝试常用中文编码
+                    try:
+                        decoded_content = response.content.decode('utf-8')
+                    except UnicodeDecodeError:
+                        try:
+                            decoded_content = response.content.decode('gbk')
+                        except UnicodeDecodeError:
+                            decoded_content = response.content.decode('gb2312', errors='ignore')
+                
+                # 使用BeautifulSoup解析网页内容
+                soup = BeautifulSoup(decoded_content, "html.parser")
+                
+                # 移除脚本和样式元素
+                for script in soup(["script", "style"]):
+                    script.decompose()
+                
+                # 提取网页正文内容
+                content_tags = ['main', 'article', '.content', '#content', 'div.content', '.post', '.entry', 'div.post', 'div.entry', '[role="main"]', '.main-content']
+                content = None
+                
+                for tag in content_tags:
+                    content = soup.select_one(tag)
+                    if content:
+                        break
+                
+                # 如果没有找到指定的内容区域，就使用body标签的内容
+                if not content:
+                    body = soup.find('body')
+                    if body:
+                        content = body
+                    else:
+                        content = soup
+                
+                # 获取文本内容并清理
+                text = content.get_text()
+                
+                # 清理文本 - 去除多余的空白字符
+                lines = (line.strip() for line in text.splitlines())
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                text = ' '.join(chunk for chunk in chunks if chunk)
+                
+                # 添加当前网页的序号和内容到总内容中
+                all_content.append(f"\n--- 网页 {i} ({original_url}) -> ({url}) ---\n{text}\n--- 网页 {i} 结束 ---\n")
+                
+            except requests.RequestException as e:
+                all_content.append(f"\n--- 网页 {i} ({original_url}) 请求失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
+            except UnicodeDecodeError as e:
+                all_content.append(f"\n--- 网页 {i} ({original_url}) 解码失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
+            except Exception as e:
+                all_content.append(f"\n--- 网页 {i} ({original_url}) 处理失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
         
-        # 使用BeautifulSoup解析网页内容
-        soup = BeautifulSoup(decoded_content, "html.parser")
-        
-        # 移除脚本和样式元素
-        for script in soup(["script", "style"]):
-            script.decompose()
-        
-        # 提取网页正文内容
-        content_tags = ['main', 'article', '.content', '#content', 'div.content', '.post', '.entry', 'div.post', 'div.entry', '[role="main"]', '.main-content']
-        content = None
-        
-        for tag in content_tags:
-            content = soup.select_one(tag)
-            if content:
-                break
-        
-        # 如果没有找到指定的内容区域，就使用body标签的内容
-        if not content:
-            body = soup.find('body')
-            if body:
-                content = body
-            else:
-                content = soup
-        
-        # 获取文本内容并清理
-        text = content.get_text()
-        
-        # 清理文本 - 去除多余的空白字符
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = ' '.join(chunk for chunk in chunks if chunk)
+        # 拼接所有内容
+        final_content = ''.join(all_content)
         
         # 限制返回内容长度，防止输出过长
-        max_length = 2000
-        if len(text) > max_length:
-            text = text[:max_length] + "\n... (内容已截断)"
+        max_length = 8000  # 增加最大长度以容纳多个网页内容
+        if len(final_content) > max_length:
+            final_content = final_content[:max_length] + "\n\n... (内容已截断)"
         
-        return text
+        return final_content
         
-    except requests.RequestException as e:
-        return f"网络请求错误: {str(e)}"
-    except UnicodeDecodeError as e:
-        return f"编码解码错误: {str(e)}"
     except Exception as e:
         return f"获取网页内容时发生错误: {str(e)}"
 
 
 def web_search_tool(**kwargs):
     """
-    使用百度搜索
+    使用必应(Bing)搜索
     :param query: 搜索查询字符串
     :return: 搜索结果
     """
@@ -273,82 +306,74 @@ def web_search_tool(**kwargs):
             "Upgrade-Insecure-Requests": "1",
         }
         
-        # 百度搜索URL
-        url = f"https://www.baidu.com/s?wd={query}"
+        # 必应搜索URL
+        url = f"https://www.bing.com/search?q={query}"
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, "html.parser")
         
-        # 提取百度搜索结果标题和链接
+        # 提取必应搜索结果标题和链接
         search_results = []
         
         # 尝试多种可能的选择器来获取搜索结果
         selectors = [
-            'div.result',           # 主要选择器 - 百度搜索结果容器
-            'div.c-container',      # 备用选择器 - 百度另一种搜索结果容器
-            'div.tF2Cxc'            # 如果使用Google样式的话
+            'li.b_algo',           # 主要选择器 - 必应搜索结果容器
+            'div.b_title',         # 标题选择器
+            'ol#b_results li'      # 搜索结果列表项
         ]
         
-        for selector in selectors:
-            results = soup.select(selector)
-            if results:
-                for result in results:
-                    # 寻找标题元素
-                    title_elem = result.find(['h3', 'h1', 'h2']) or result.find('a', {'data-click': True})
-                    
-                    if not title_elem:
-                        title_elem = result.find('a')
-                    
-                    if title_elem:
-                        # 获取标题文本
-                        if title_elem.name == 'a':
-                            title = title_elem.get_text().strip()
-                            link = title_elem.get('href', '')
-                        else:
-                            title = title_elem.get_text().strip()
-                            link_elem = result.find('a', href=True)
-                            link = link_elem.get('href', '') if link_elem else ''
-                        
-                        # 如果标题为空，跳过此结果
-                        if not title.strip():
-                            continue
-                        
-                        # 处理相对链接
-                        if link.startswith('/'):
-                            link = 'https://www.baidu.com' + link
-                        
-                        # 尝试获取摘要信息
-                        desc_elem = result.find('div', {'class': 'c-abstract'}) or \
-                                   result.find('span', {'class': re.compile(r'.*content.*')}) or \
-                                   result.find('p')
-                        desc = desc_elem.get_text().strip() if desc_elem else ""
-                        
-                        search_results.append({
-                            "title": title,
-                            "link": link,
-                            "desc": desc
-                        })
+        # 首先尝试主要选择器
+        results = soup.select('li.b_algo')
+        if results:
+            for result in results:
+                # 寻找标题元素
+                title_elem = result.find('h2') or result.find('a')
                 
-                if search_results:
-                    break
+                if title_elem:
+                    # 获取标题文本
+                    title = title_elem.get_text().strip()
+                    link_elem = result.find('a', href=True)
+                    link = link_elem.get('href', '') if link_elem else ''
+                    
+                    # 如果标题为空或链接为空，跳过此结果
+                    if not title.strip() or not link.strip():
+                        continue
+                    
+                    # 尝试获取摘要信息
+                    desc_elem = result.find('p', {'class': 'b_paractl'})
+                    if not desc_elem:
+                        desc_elem = result.find('div', {'class': 'b_caption'})
+                    if not desc_elem:
+                        desc_elem = result.find('p')
+                    
+                    desc = desc_elem.get_text().strip() if desc_elem else ""
+                    
+                    search_results.append({
+                        "title": title,
+                        "link": link,
+                        "desc": desc
+                    })
         
         # 如果以上选择器都没找到结果，尝试更通用的方法
         if not search_results:
-            # 在百度页面中寻找包含data-click属性的链接，这通常是搜索结果
+            # 在必应页面中寻找搜索结果
             links = soup.find_all('a', href=True)
             for link in links:
                 href = link.get('href', '')
                 title = link.get_text().strip()
                 
-                # 百度搜索结果通常有data-click属性
-                if title and '百度快照' not in title and len(title) > 2:
-                    desc = "可能的相关结果"
-                    search_results.append({
-                        "title": title,
-                        "link": href,
-                        "desc": desc
-                    })
+                # 检查是否是有效的搜索结果链接
+                if title and len(title) > 2 and ('/search?' not in href and 'bing.com' not in href):
+                    # 检查是否在搜索结果区域内
+                    parent = link.find_parent()
+                    if parent and ('b_algo' in parent.get('class', []) or 'b_result' in parent.get('class', [])):
+                        desc = "可能的相关结果"
+                        search_results.append({
+                            "title": title,
+                            "link": href,
+                            "desc": desc
+                        })
         
         if search_results:
             result_str = ""
