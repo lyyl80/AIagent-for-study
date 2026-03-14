@@ -1,6 +1,8 @@
 import subprocess
 import sys
 import platform
+import requests
+from bs4 import BeautifulSoup
 
 
 def read_file_tool(**kwargs):
@@ -85,7 +87,6 @@ def run_shell(**kwargs):
         timeout = kwargs.get("timeout", 30)
         cwd = kwargs.get("cwd")
         
-        # 简化版本：直接使用subprocess.run
         result = subprocess.run(
             command,
             shell=True,
@@ -166,6 +167,61 @@ def replace_content_tool(**kwargs):
     except Exception as e:
         print(e)
         return f"Error replacing content in file: {str(e)}"
+
+def web_search_tool(**kwargs):
+    """
+    使用谷歌搜索
+    :param query: 搜索查询字符串
+    :return: 搜索结果
+    """
+    try:
+        query = kwargs["query"]
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        url = f"https://www.google.com/search?q={query}"
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # 提取搜索结果标题和链接
+        search_results = []
+        for g in soup.find_all('div', class_='g'):
+            anchor = g.find('a')
+            if anchor and anchor.get('href'):
+                link = anchor['href']
+                title_elem = g.find('h3')
+                title = title_elem.text if title_elem else "No title found"
+                search_results.append({
+                    "title": title,
+                    "link": link
+                })
+        
+        # 如果上面的方法没找到结果，尝试另一种选择器
+        if not search_results:
+            for r in soup.find_all('div', class_='r'):
+                anchor = r.find('a')
+                if anchor and anchor.get('href'):
+                    link = anchor['href']
+                    title_elem = r.find('h3')
+                    title = title_elem.text if title_elem else "No title found"
+                    search_results.append({
+                        "title": title,
+                        "link": link
+                    })
+
+        if search_results:
+            result_str = ""
+            for i, result in enumerate(search_results[:5], 1):  # 只返回前5个结果
+                result_str += f"{i}. {result['title']}\n   Link: {result['link']}\n"
+            return result_str.strip()
+        else:
+            return "未能找到搜索结果，请稍后再试。"
+            
+    except requests.RequestException as e:
+        return f"网络请求错误: {str(e)}"
+    except Exception as e:
+        return f"搜索过程中发生错误: {str(e)}"
 
 
 def finish_tool(**kwargs):

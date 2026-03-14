@@ -1,5 +1,5 @@
 from typing import Dict, Any, Callable, Tuple, Optional
-from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool
+from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool , web_search_tool
 
 
 # 工具注册表类型定义
@@ -45,6 +45,15 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
             "optional_params": []
         }
     ),
+    "web_search": (
+        web_search_tool,
+        "使用谷歌搜索。参数: query - 搜索查询字符串",
+        {
+            "required_params": ["query"],
+            "optional_params": []
+        }
+    ),
+
     "finish": (
         finish_tool,
         "结束任务。可选参数: response - 结语消息",
