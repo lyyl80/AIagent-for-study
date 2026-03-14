@@ -46,7 +46,7 @@ class ChatAgent:
     支持工具调用、历史记忆和用户交互。
     """
     
-    def __init__(self, task: str,user_input: Optional[str] = None):
+    def __init__(self, user_input: Optional[str] = None):
         
         self.llm_json = model_manager.llm_json
         model_info = model_manager.get_model_by_key(MODEL_ING)
@@ -56,8 +56,8 @@ class ChatAgent:
             system_prompt
         )
         self.history = Memory(user_input=user_input)
-        self.task = task
-    
+        self.user_input = user_input
+        self.tools = TOOL_REGISTRY
         self.max_steps = 100
         self.debug = False  # 调试模式
         
@@ -72,7 +72,7 @@ class ChatAgent:
         # 只使用最近3步历史记录，避免提示词过长
         recent_history = self.history.get_recent_steps(3)
         return THINK_PROMPT.format(
-            task=self.task,
+            task=self.user_input,
             history=recent_history,
             tools=tools_desc,
             action_schema=action_schema
@@ -205,28 +205,18 @@ class ChatAgent:
                 args_str = ", ".join([f"{k}={repr(v)[:50]}" for k, v in tool_args.items()])
                 if args_str:
                     print(f"  Args: {args_str}")
-        
+        failed = False
         # 调用工具
         try:
             result = call_tool(tool, **tool_args)
         except Exception as e:
             error_msg = f"工具调用异常: {str(e)}"
+            failed = True
             print(f"错误: {error_msg}")
             return (error_msg, tool, False, True)
         
         # 标准化错误检测
-        failed = False
-        if isinstance(result, str):
-            # 检查常见错误模式
-            error_patterns = [
-                "Error:", "错误:", "失败:", "失败：", "Invalid", "invalid",
-                "File not found", "文件不存在", "No such file", "找不到文件",
-                "Missing", "缺少", "not found", "未找到"
-            ]
-            
-            if any(pattern in result for pattern in error_patterns):
-                failed = True
-                print(f"工具执行失败: {result[:200]}")
+        
         
         # 处理工具结果
         if tool == "talk":
@@ -330,8 +320,6 @@ class ChatAgent:
         consecutive_failures = 0
         max_consecutive_failures = 3
         no_progress_steps = 0
-        max_no_progress_steps = 5
-        last_successful_action = None
         
         for step_num in range(self.max_steps):
             if self.debug:
@@ -345,35 +333,14 @@ class ChatAgent:
             if recent_history:
                 last_step = recent_history[0]
                 failed = last_step.get("failed", False)
-                
                 # 更新失败计数器
                 if failed:
                     consecutive_failures += 1
                     print(f"警告：连续失败次数: {consecutive_failures}/{max_consecutive_failures}")
-                    
-                    # 如果连续失败次数过多，尝试调整策略
-                    if consecutive_failures >= max_consecutive_failures:
-                        print("连续失败次数过多，尝试调整策略...")
-                        self._adjust_strategy()
-                        consecutive_failures = 0  # 重置计数器
+    
                 else:
                     # 成功执行，重置失败计数器
                     consecutive_failures = 0
-                    last_successful_action = action
-                    
-                    # 检查进度停滞
-                    if last_successful_action and action == last_successful_action:
-                        no_progress_steps += 1
-                    else:
-                        no_progress_steps = 0
-                        last_successful_action = action
-                
-                # 停滞检测
-                if no_progress_steps >= max_no_progress_steps:
-                    print("检测到进度停滞，尝试不同方法...")
-                    self._handle_stagnation()
-                    no_progress_steps = 0
-            
             # 检查是否完成任务
             if action.get("tool") == "finish":
                 print("Task completed.")
@@ -407,52 +374,3 @@ class ChatAgent:
                 "output": "任务因步骤限制而结束"
             })
     
-    def _adjust_strategy(self):
-        """调整执行策略"""
-        print("调整策略：尝试简化任务或请求用户帮助...")
-        
-        # 添加到历史记录
-        self.history.add_conversation({
-            "input": {"tool": "talk", "tool_args": {"message": "连续多次操作失败，正在调整策略..."}},
-            "output": "策略调整",
-            "reflect": "连续失败后调整策略"
-        })
-        
-        # 可能的策略调整：
-        # 1. 尝试不同的工具或方法
-        # 2. 简化当前任务
-        # 3. 请求用户提供更多信息
-        # 这里使用talk工具询问用户
-        return {
-            "action": {
-                "tool": "talk",
-                "tool_args": {
-                    "message": "连续多次操作失败。请提供更多详细信息，或尝试简化您的请求。"
-                }
-            }
-        }
-    
-    def _handle_stagnation(self):
-        """处理进度停滞"""
-        print("处理停滞：尝试不同的方法...")
-        
-        # 添加到历史记录
-        self.history.add_conversation({
-            "input": {"tool": "talk", "tool_args": {"message": "检测到进度停滞，尝试不同方法..."}},
-            "output": "停滞处理",
-            "reflect": "进度停滞后调整方法"
-        })
-        
-        # 可能的停滞处理：
-        # 1. 回顾历史，尝试不同的工具
-        # 2. 重新分析任务
-        # 3. 请求用户指导
-        # 这里使用talk工具询问用户
-        return {
-            "action": {
-                "tool": "talk",
-                "tool_args": {
-                    "message": "检测到进度停滞。是否需要调整方向或提供其他信息？"
-                }
-            }
-        }

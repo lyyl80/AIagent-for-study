@@ -87,7 +87,7 @@ def run_interactive_mode( verbose: bool = False):
     
     # 初始化记忆
     session_id = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    agent = ChatAgent(task="", user_input="")  # 初始化一个默认的agent实例
+    agent = ChatAgent(user_input="")  # 初始化一个默认的agent实例
     
     if verbose:
         print(f"会话ID: {session_id}")
@@ -98,7 +98,7 @@ def run_interactive_mode( verbose: bool = False):
             # 获取用户输入
             user_input = input("\nYou: ").strip()
             # 使用同一个agent实例，不重新创建
-            agent.task = user_input  # 更新任务
+            agent.user_input = user_input  # 更新任务
             
             if verbose:
                 print(f"已加载 {len(agent.history.messages)} 条对话消息, {len(agent.history.history)} 条步骤记录")
