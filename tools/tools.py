@@ -222,5 +222,3 @@ def finish_tool(**kwargs):
     if response:
         return response
     return "任务完成"
-
-    
