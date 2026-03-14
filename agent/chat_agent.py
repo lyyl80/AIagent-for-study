@@ -314,7 +314,7 @@ class ChatAgent:
     
     def run(self) -> None:
         """运行代理循环（带进度跟踪和停滞检测）"""
-        print(f"Task: {self.task}")
+        print(f"Task: {self.user_input}")
         
         # 进度跟踪变量
         consecutive_failures = 0
@@ -337,7 +337,7 @@ class ChatAgent:
                 if failed:
                     consecutive_failures += 1
                     print(f"警告：连续失败次数: {consecutive_failures}/{max_consecutive_failures}")
-    
+
                 else:
                     # 成功执行，重置失败计数器
                     consecutive_failures = 0
