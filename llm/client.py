@@ -13,7 +13,6 @@ class ModelManager:
             "本地模型": {
                 "gemma3:12b": {"name": "gemma3:12b", "type": "local"},
                 "gpt-oss:20b": {"name": "gpt-oss:20b", "type": "local"},
-                "geem3": {"name": "geem3", "type": "local"},
             }
         }
         

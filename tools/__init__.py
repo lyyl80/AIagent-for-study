@@ -1,5 +1,5 @@
 from typing import Dict, Any, Callable, Tuple, Optional
-from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool , web_search_tool
+from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool , web_search_tool ,web_content_tool
 
 
 # 工具注册表类型定义
@@ -53,7 +53,15 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
             "optional_params": []
         }
     ),
-
+    "web_content":(
+        web_content_tool,
+        "获取网页内容。参数: url - 要获取内容的网址",
+        {
+            "required_params": ["url"],
+            "optional_params": []
+        }
+    ),
+     
     "finish": (
         finish_tool,
         "结束任务。可选参数: response - 结语消息",
