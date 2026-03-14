@@ -18,7 +18,6 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  %(prog)s "创建一个Python文件"          # 执行单个任务
   %(prog)s --interactive                # 进入交互模式
   %(prog)s --session my_session         # 使用会话文件
   %(prog)s --list-tools                 # 列出可用工具

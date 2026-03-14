@@ -58,7 +58,7 @@ class ModelManager:
         except Exception as e:
             raise Exception(f"模型调用失败: {str(e)}")
     
-    def _call_cloud_model(self, model_key, messages, system_prompt, prefix="Thinking: ", output=True):
+    def _call_cloud_model(self, model_key, messages, system_prompt, prefix="", output=True):
         """调用云端模型"""
         api_key = os.environ.get('DEEPSEEK_API_KEY')
         if not api_key:
@@ -86,7 +86,7 @@ class ModelManager:
             print()  # 换行
         return full_content
     
-    def _call_local_model(self, model_key, messages, system_prompt, prefix="Thinking: ",output=True):
+    def _call_local_model(self, model_key, messages, system_prompt, prefix="",output=True):
         """调用本地模型"""
         full_messages = [{"role": "system", "content": system_prompt}] + messages
         try:
