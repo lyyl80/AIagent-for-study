@@ -373,4 +373,3 @@ class ChatAgent:
                 "input": {"tool": "finish", "tool_args": {"response": f"达到最大步骤限制 ({self.max_steps})"}},
                 "output": "任务因步骤限制而结束"
             })
-    
