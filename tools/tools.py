@@ -200,17 +200,8 @@ def web_content_tool(**kwargs):
         
         for i, original_url in enumerate(urls, 1):
             try:
-                # 处理百度跳转链接
+                # 直接使用传入的URL，不再处理百度跳转链接
                 url = original_url
-                if "baidu.com/link" in original_url or "baidu.com" in original_url and "url=" in original_url:
-                    # 百度跳转链接，需要先获取真实URL
-                    try:
-                        response = requests.get(original_url, headers=headers, timeout=10, allow_redirects=True)
-                        # 检查重定向后的最终URL
-                        url = response.url
-                    except Exception as e:
-                        # 如果重定向失败，仍然尝试原链接
-                        url = original_url
                 
                 # 发送请求获取网页内容
                 response = requests.get(url, headers=headers, timeout=10)
@@ -277,7 +268,7 @@ def web_content_tool(**kwargs):
         final_content = ''.join(all_content)
         
         # 限制返回内容长度，防止输出过长
-        max_length = 8000  # 增加最大长度以容纳多个网页内容
+        max_length = 2000  # 增加最大长度以容纳多个网页内容
         if len(final_content) > max_length:
             final_content = final_content[:max_length] + "\n\n... (内容已截断)"
         
