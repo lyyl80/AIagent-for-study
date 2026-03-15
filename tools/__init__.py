@@ -1,5 +1,5 @@
 from typing import Dict, Any, Callable, Tuple, Optional
-from .tools import read_file_tool, run_shell, write_file_tool, talk_tool, replace_content_tool, finish_tool , web_search_tool ,web_content_tool
+from .tools import *
 
 
 # 工具注册表类型定义
@@ -64,7 +64,14 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
             "optional_params": []
         }
     ),
-     
+    "fusion360": (
+        fusion360_tool,
+        "与Fusion360进行交互。参数: tool_name - 要执行的Fusion360命令，params - 要执行的命令字符串",
+        {
+            "required_params": ["tool_name", "params"],
+            "optional_params": []
+        }
+    ),
     "finish": (
         finish_tool,
         "结束任务。可选参数: response - 结语消息",
