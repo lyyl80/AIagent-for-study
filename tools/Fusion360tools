@@ -1,0 +1,818 @@
+# -*- coding: utf-8 -*-
+# Fusion360 AI Agent 终极建模工具库
+# 覆盖：建模/装配/工程图/感知/参数化/导出/批量/标准化
+import adsk.core, adsk.fusion, traceback, math
+from typing import List, Dict, Any
+
+# 全局核心对象（Fusion360 固定初始化）
+app = adsk.core.Application.get()
+ui = app.userInterface
+design = app.activeProduct
+root_comp = design.rootComponent if design else None
+features = root_comp.features if root_comp else None
+sketches = root_comp.sketches if root_comp else None
+# 全局缓存：存储草图/体/特征ID，方便AI调用
+obj_cache: Dict[str, Any] = {"sketches": {}, "bodies": {}, "features": {}, "assemblies": {}}
+
+# ==========================
+# 模块1：基础初始化/场景感知（AI 核心能力：知当前模型状态）
+# ==========================
+def init_design() -> str:
+    """初始化新设计，清空所有内容"""
+    try:
+        global design, root_comp, features, sketches
+        app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+        design = app.activeProduct
+        root_comp = design.rootComponent
+        features = root_comp.features
+        sketches = root_comp.sketches
+        obj_cache.clear()
+        obj_cache.update({"sketches": {}, "bodies": {}, "features": {}, "assemblies": {}})
+        return "设计已初始化，新空白工程创建完成"
+    except:
+        return f"初始化失败：{traceback.format_exc()}"
+
+def get_scene_info() -> Dict[str, Any]:
+    """AI 场景感知：获取当前模型所有信息（返回JSON，AI可解析）"""
+    try:
+        if not root_comp:
+            return {"status": "error", "msg": "无激活设计"}
+        # 提取体信息
+        bodies_info = []
+        for i, body in enumerate(root_comp.bRepBodies):
+            bodies_info.append({
+                "id": body.id,
+                "name": body.name,
+                "type": "solid" if body.isSolid else "surface",
+                "volume": body.volume if body.isSolid else 0,
+                "face_count": body.faces.count,
+                "edge_count": body.edges.count
+            })
+            obj_cache["bodies"][body.name] = body.id
+        # 提取草图信息
+        sketches_info = []
+        for i, sketch in enumerate(root_comp.sketches):
+            sketches_info.append({
+                "id": sketch.id,
+                "name": sketch.name,
+                "plane": sketch.referencePlane.name if sketch.referencePlane else "unknown",
+                "curve_count": sketch.sketchCurves.count,
+                "profile_count": sketch.profiles.count
+            })
+            obj_cache["sketches"][sketch.name] = sketch.id
+        # 提取特征信息
+        features_info = []
+        for i, feat in enumerate(root_comp.features):
+            features_info.append({
+                "id": feat.id,
+                "name": feat.name,
+                "type": feat.objectType.split(".")[-1]
+            })
+            obj_cache["features"][feat.name] = feat.id
+        # 提取参数信息
+        params_info = []
+        for param in design.userParameters:
+            params_info.append({
+                "name": param.name,
+                "value": param.value,
+                "unit": param.unit,
+                "expression": param.expression
+            })
+        # 提取装配信息
+        asm_info = {"component_count": design.allComponents.count}
+        # 组合返回
+        scene_info = {
+            "status": "success",
+            "design_name": app.activeDocument.name,
+            "bodies": bodies_info,
+            "sketches": sketches_info,
+            "features": features_info,
+            "parameters": params_info,
+            "assembly": asm_info,
+            "obj_cache": obj_cache  # 给AI的对象缓存，方便直接调用
+        }
+        return scene_info
+    except:
+        return {"status": "error", "msg": f"获取场景信息失败：{traceback.format_exc()}"}
+
+def select_obj(obj_type: str, obj_name: str) -> Any:
+    """AI 选择对象：根据类型/名称获取对象（封装选择逻辑，AI无需懂底层）"""
+    try:
+        if obj_type == "body" and obj_name in obj_cache["bodies"]:
+            return root_comp.findEntityById(obj_cache["bodies"][obj_name])
+        elif obj_type == "sketch" and obj_name in obj_cache["sketches"]:
+            return root_comp.findEntityById(obj_cache["sketches"][obj_name])
+        elif obj_type == "feature" and obj_name in obj_cache["features"]:
+            return root_comp.findEntityById(obj_cache["features"][obj_name])
+        else:
+            return None
+    except:
+        return None
+
+# ==========================
+# 模块2：草图绘制（基础+批量，支持AI精准定位）
+# ==========================
+def create_sketch(plane_name: str, sketch_name: str = "sketch") -> str:
+    """创建草图，指定平面/名称，自动加入缓存"""
+    try:
+        if plane_name == "xy":
+            plane = root_comp.xYConstructionPlane
+        elif plane_name == "yz":
+            plane = root_comp.yZConstructionPlane
+        elif plane_name == "xz":
+            plane = root_comp.xZConstructionPlane
+        else:
+            return f"失败：平面仅支持xy/yz/xz"
+        sketch = sketches.add(plane)
+        sketch.name = sketch_name
+        obj_cache["sketches"][sketch_name] = sketch.id
+        return f"成功：创建{plane_name}草图[{sketch_name}]，ID={sketch.id}"
+    except:
+        return f"创建草图失败：{traceback.format_exc()}"
+
+def draw_circle(sketch_name: str, x: float, y: float, radius: float) -> str:
+    """绘制圆形：指定草图/圆心坐标/半径"""
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch:
+            return f"失败：草图[{sketch_name}]不存在"
+        sketch.sketchCurves.sketchCircles.addByCenterRadius(
+            adsk.core.Point3D.create(x, y, 0), radius
+        )
+        return f"成功：在[{sketch_name}]绘制圆(中心{x},{y}，半径{radius})"
+    except:
+        return f"绘制圆失败：{traceback.format_exc()}"
+
+def draw_rect(sketch_name: str, x1: float, y1: float, x2: float, y2: float) -> str:
+    """绘制矩形：指定草图/对角坐标"""
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch:
+            return f"失败：草图[{sketch_name}]不存在"
+        sketch.sketchCurves.sketchLines.addTwoPointRectangle(
+            adsk.core.Point3D.create(x1, y1, 0),
+            adsk.core.Point3D.create(x2, y2, 0)
+        )
+        return f"成功：在[{sketch_name}]绘制矩形({x1},{y1})→({x2},{y2})"
+    except:
+        return f"绘制矩形失败：{traceback.format_exc()}"
+
+def draw_polygon(sketch_name: str, x: float, y: float, radius: float, sides: int) -> str:
+    """绘制正多边形：指定草图/中心/外接圆半径/边数"""
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch:
+            return f"失败：草图[{sketch_name}]不存在"
+        sketch.sketchCurves.sketchPolygons.add(
+            adsk.core.Point3D.create(x, y, 0), radius, sides
+        )
+        return f"成功：在[{sketch_name}]绘制{sides}边形(中心{x},{y}，半径{radius})"
+    except:
+        return f"绘制多边形失败：{traceback.format_exc()}"
+
+def draw_helix(sketch_name: str, pitch: float, height: float, radius: float, x: float=0, y: float=0) -> str:
+    """绘制螺旋线：指定草图/螺距/高度/半径/中心"""
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch:
+            return f"失败：草图[{sketch_name}]不存在"
+        helix_input = sketch.sketchCurves.sketchHelices.createInput()
+        helix_input.setByPitchHeight(
+            adsk.core.ValueInput.createByReal(pitch),
+            adsk.core.ValueInput.createByReal(height),
+            adsk.core.ValueInput.createByReal(radius),
+            adsk.fusion.HelixTypes.RightHandedHelixType
+        )
+        helix = sketch.sketchCurves.sketchHelices.add(helix_input)
+        helix.center = adsk.core.Point3D.create(x, y, 0)
+        return f"成功：在[{sketch_name}]绘制螺旋线(螺距{pitch}，高度{height}，半径{radius})"
+    except:
+        return f"绘制螺旋线失败：{traceback.format_exc()}"
+
+def batch_draw(sketch_name: str, shapes: List[Dict[str, Any]]) -> str:
+    """AI 批量绘制：传入形状列表，一次性绘制多个图形
+    shapes示例：[{"type":"circle","x":0,"y":0,"r":5},{"type":"rect","x1":0,"y1":0,"x2":10,"y2":10}]
+    """
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch:
+            return f"失败：草图[{sketch_name}]不存在"
+        success_count = 0
+        for shape in shapes:
+            if shape["type"] == "circle":
+                draw_circle(sketch_name, shape["x"], shape["y"], shape["r"])
+                success_count +=1
+            elif shape["type"] == "rect":
+                draw_rect(sketch_name, shape["x1"], shape["y1"], shape["x2"], shape["y2"])
+                success_count +=1
+        return f"批量绘制完成：成功{success_count}个，总{len(shapes)}个"
+    except:
+        return f"批量绘制失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块3：基础建模（拉伸/旋转/扫描/放样，支持新体/切除/合并）
+# ==========================
+def extrude(sketch_name: str, distance: float, op_type: str = "new", feat_name: str = "extrude") -> str:
+    """拉伸：指定草图/深度/操作类型/特征名
+    op_type: new(新体) / cut(切除) / join(合并)
+    """
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch or sketch.profiles.count == 0:
+            return f"失败：草图[{sketch_name}]无轮廓"
+        # 映射操作类型
+        op_map = {
+            "new": adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            "cut": adsk.fusion.FeatureOperations.CutFeatureOperation,
+            "join": adsk.fusion.FeatureOperations.JoinFeatureOperation
+        }
+        if op_type not in op_map:
+            return f"失败：操作类型仅支持new/cut/join"
+        # 创建拉伸
+        prof = sketch.profiles.item(0)
+        ext_input = features.extrudeFeatures.createInput(prof, op_map[op_type])
+        ext_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(distance))
+        ext_feat = features.extrudeFeatures.add(ext_input)
+        ext_feat.name = feat_name
+        obj_cache["features"][feat_name] = ext_feat.id
+        # 更新体缓存
+        for body in root_comp.bRepBodies:
+            obj_cache["bodies"][body.name] = body.id
+        return f"成功：创建拉伸[{feat_name}]，深度{distance}，类型{op_type}"
+    except:
+        return f"拉伸失败：{traceback.format_exc()}"
+
+def revolve(sketch_name: str, axis_plane: str, angle: float, op_type: str = "new", feat_name: str = "revolve") -> str:
+    """旋转：指定草图/旋转轴/角度/操作类型
+    axis_plane: x(绕X轴) / y(绕Y轴) / z(绕Z轴)
+    """
+    try:
+        sketch = select_obj("sketch", sketch_name)
+        if not sketch or sketch.profiles.count == 0:
+            return f"失败：草图[{sketch_name}]无轮廓"
+        # 映射旋转轴
+        axis_map = {"x": root_comp.xAxis, "y": root_comp.yAxis, "z": root_comp.zAxis}
+        op_map = {
+            "new": adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            "cut": adsk.fusion.FeatureOperations.CutFeatureOperation,
+            "join": adsk.fusion.FeatureOperations.JoinFeatureOperation
+        }
+        if axis_plane not in axis_map or op_type not in op_map:
+            return f"失败：轴仅支持x/y/z，操作类型仅支持new/cut/join"
+        # 创建旋转
+        prof = sketch.profiles.item(0)
+        rev_input = features.revolveFeatures.createInput(prof, axis_map[axis_plane], op_map[op_type])
+        rev_input.setAngleExtent(False, adsk.core.ValueInput.createByReal(math.radians(angle)))
+        rev_feat = features.revolveFeatures.add(rev_input)
+        rev_feat.name = feat_name
+        obj_cache["features"][feat_name] = rev_feat.id
+        return f"成功：创建旋转[{feat_name}]，角度{angle}°，绕{axis_plane}轴"
+    except:
+        return f"旋转失败：{traceback.format_exc()}"
+
+def sweep(profile_sketch: str, path_sketch: str, op_type: str = "new", feat_name: str = "sweep") -> str:
+    """扫掠：指定轮廓草图/路径草图/操作类型"""
+    try:
+        prof_sketch = select_obj("sketch", profile_sketch)
+        path_sketch = select_obj("sketch", path_sketch)
+        if not prof_sketch or not path_sketch or prof_sketch.profiles.count == 0:
+            return f"失败：轮廓/路径草图不存在或无轮廓"
+        op_map = {
+            "new": adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            "cut": adsk.fusion.FeatureOperations.CutFeatureOperation,
+            "join": adsk.fusion.FeatureOperations.JoinFeatureOperation
+        }
+        if op_type not in op_map:
+            return f"失败：操作类型仅支持new/cut/join"
+        # 创建扫掠
+        prof = prof_sketch.profiles.item(0)
+        path = features.createPath(path_sketch.sketchCurves)
+        sweep_input = features.sweepFeatures.createInput(prof, path, op_map[op_type])
+        sweep_feat = features.sweepFeatures.add(sweep_input)
+        sweep_feat.name = feat_name
+        obj_cache["features"][feat_name] = sweep_feat.id
+        return f"成功：创建扫掠[{feat_name}]，轮廓[{profile_sketch}]，路径[{path_sketch}]"
+    except:
+        return f"扫掠失败：{traceback.format_exc()}"
+
+def loft(sketch_names: List[str], op_type: str = "new", feat_name: str = "loft") -> str:
+    """放样：指定多个轮廓草图列表/操作类型（AI 核心复杂建模能力）"""
+    try:
+        # 验证所有草图
+        profs = []
+        for sn in sketch_names:
+            sketch = select_obj("sketch", sn)
+            if not sketch or sketch.profiles.count == 0:
+                return f"失败：草图[{sn}]不存在或无轮廓"
+            profs.append(sketch.profiles.item(0))
+        # 映射操作类型
+        op_map = {
+            "new": adsk.fusion.FeatureOperations.NewBodyFeatureOperation,
+            "cut": adsk.fusion.FeatureOperations.CutFeatureOperation,
+            "join": adsk.fusion.FeatureOperations.JoinFeatureOperation
+        }
+        if op_type not in op_map:
+            return f"失败：操作类型仅支持new/cut/join"
+        # 创建放样
+        loft_sections = adsk.core.ObjectCollection.create()
+        for p in profs:
+            loft_sections.add(p)
+        loft_input = features.loftFeatures.createInput(loft_sections)
+        loft_feat = features.loftFeatures.add(loft_input)
+        loft_feat.name = feat_name
+        obj_cache["features"][feat_name] = loft_feat.id
+        return f"成功：创建放样[{feat_name}]，轮廓草图{sketch_names}"
+    except:
+        return f"放样失败：{traceback.format_exc()}"
+
+# 快速基础体创建（AI 常用快捷函数，封装草图+拉伸）
+def create_box(name: str, x: float, y: float, z: float, origin_x: float=0, origin_y: float=0) -> str:
+    """快捷创建长方体：指定名称/尺寸/原点，自动创建草图+拉伸"""
+    try:
+        # 自动创建草图
+        sketch = create_sketch("xy", f"box_sketch_{name}")
+        if "失败" in sketch:
+            return sketch
+        # 绘制矩形
+        draw_rect(f"box_sketch_{name}", origin_x, origin_y, origin_x+x, origin_y+y)
+        # 拉伸
+        res = extrude(f"box_sketch_{name}", z, "new", name)
+        # 重命名体
+        for body in root_comp.bRepBodies:
+            if body.name == "Body":
+                body.name = name
+                obj_cache["bodies"][name] = body.id
+                break
+        return res.replace("extrude", f"长方体[{name}]")
+    except:
+        return f"创建长方体失败：{traceback.format_exc()}"
+
+def create_cylinder(name: str, radius: float, height: float, origin_x: float=0, origin_y: float=0) -> str:
+    """快捷创建圆柱体：指定名称/半径/高度/原点，自动创建草图+拉伸"""
+    try:
+        sketch = create_sketch("xy", f"cyl_sketch_{name}")
+        if "失败" in sketch:
+            return sketch
+        draw_circle(f"cyl_sketch_{name}", origin_x, origin_y, radius)
+        res = extrude(f"cyl_sketch_{name}", height, "new", name)
+        for body in root_comp.bRepBodies:
+            if body.name == "Body":
+                body.name = name
+                obj_cache["bodies"][name] = body.id
+                break
+        return res.replace("extrude", f"圆柱体[{name}]")
+    except:
+        return f"创建圆柱体失败：{traceback.format_exc()}"
+
+def create_sphere(name: str, radius: float, origin_x: float=0, origin_y: float=0) -> str:
+    """快捷创建球体：指定名称/半径/原点，自动创建草图+旋转"""
+    try:
+        sketch = create_sketch("xz", f"sphere_sketch_{name}")
+        if "失败" in sketch:
+            return sketch
+        draw_circle(f"sphere_sketch_{name}", origin_x, origin_y, radius)
+        res = revolve(f"sphere_sketch_{name}", "x", 360, "new", name)
+        for body in root_comp.bRepBodies:
+            if body.name == "Body":
+                body.name = name
+                obj_cache["bodies"][name] = body.id
+                break
+        return res.replace("revolve", f"球体[{name}]")
+    except:
+        return f"创建球体失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块4：高级修改/工业特征（壳体/拔模/螺纹/倒角/圆角/孔）
+# ==========================
+def create_shell(body_name: str, thickness: float, remove_faces: List[int] = []) -> str:
+    """创建壳体（抽壳）：指定体/壁厚/要移除的面索引（默认不移除，封闭空心）"""
+    try:
+        body = select_obj("body", body_name)
+        if not body:
+            return f"失败：体[{body_name}]不存在"
+        # 选择要移除的面
+        remove_face_col = adsk.core.ObjectCollection.create()
+        for idx in remove_faces:
+            if idx < body.faces.count:
+                remove_face_col.add(body.faces.item(idx))
+        # 创建壳体
+        shell_input = features.shellFeatures.createInput(remove_face_col, True)
+        shell_input.insideThickness = adsk.core.ValueInput.createByReal(thickness)
+        shell_feat = features.shellFeatures.add(shell_input)
+        shell_feat.name = f"shell_{body_name}"
+        obj_cache["features"][shell_feat.name] = shell_feat.id
+        return f"成功：为[{body_name}]创建壳体，壁厚{thickness}，移除面{remove_faces}"
+    except:
+        return f"创建壳体失败：{traceback.format_exc()}"
+
+def create_draft(body_name: str, angle: float, face_idxs: List[int], axis: str = "z") -> str:
+    """创建拔模（模具斜度）：指定体/角度/要拔模的面索引/拔模轴"""
+    try:
+        body = select_obj("body", body_name)
+        if not body:
+            return f"失败：体[{body_name}]不存在"
+        # 选择拔模面
+        draft_faces = adsk.core.ObjectCollection.create()
+        for idx in face_idxs:
+            if idx < body.faces.count:
+                draft_faces.add(body.faces.item(idx))
+        # 映射拔模轴
+        axis_map = {"x": root_comp.xAxis, "y": root_comp.yAxis, "z": root_comp.zAxis}
+        if axis not in axis_map:
+            return f"失败：轴仅支持x/y/z"
+        # 创建拔模
+        draft_input = features.draftFeatures.createInput(
+            draft_faces, axis_map[axis], adsk.core.ValueInput.createByReal(math.radians(angle))
+        )
+        draft_feat = features.draftFeatures.add(draft_input)
+        draft_feat.name = f"draft_{body_name}"
+        obj_cache["features"][draft_feat.name] = draft_feat.id
+        return f"成功：为[{body_name}]创建拔模，角度{angle}°，面{face_idxs}，绕{axis}轴"
+    except:
+        return f"创建拔模失败：{traceback.format_exc()}"
+
+def create_thread(body_name: str, edge_idx: int, dia: float, length: float, is_external: bool = True) -> str:
+    """创建真实螺纹：指定体/边索引/公称直径/长度/内外螺纹（True外螺纹，False内螺纹）"""
+    try:
+        body = select_obj("body", body_name)
+        if not body or edge_idx >= body.edges.count:
+            return f"失败：体[{body_name}]不存在或边索引错误"
+        edge = body.edges.item(edge_idx)
+        # 创建螺纹
+        thread_input = features.threadFeatures.createInput(edge, is_external)
+        thread_input.diameter = adsk.core.ValueInput.createByReal(dia)
+        thread_input.length = adsk.core.ValueInput.createByReal(length)
+        thread_input.setThreadStandard(adsk.fusion.ThreadStandards.ISOThreadStandard)
+        thread_feat = features.threadFeatures.add(thread_input)
+        thread_feat.name = f"thread_{body_name}"
+        obj_cache["features"][thread_feat.name] = thread_feat.id
+        return f"成功：为[{body_name}]创建{('外' if is_external else '内')}螺纹，直径{dia}，长度{length}"
+    except:
+        return f"创建螺纹失败：{traceback.format_exc()}"
+
+def create_fillet(body_name: str, edge_idxs: List[int], radius: float) -> str:
+    """批量圆角：指定体/边索引列表/半径（AI 批量修改能力）"""
+    try:
+        body = select_obj("body", body_name)
+        if not body:
+            return f"失败：体[{body_name}]不存在"
+        # 选择圆角边
+        fillet_edges = adsk.core.ObjectCollection.create()
+        for idx in edge_idxs:
+            if idx < body.edges.count:
+                fillet_edges.add(body.edges.item(idx))
+        # 创建圆角
+        fillet_input = features.filletFeatures.createInput(fillet_edges, adsk.core.ValueInput.createByReal(radius))
+        fillet_feat = features.filletFeatures.add(fillet_input)
+        fillet_feat.name = f"fillet_{body_name}"
+        obj_cache["features"][fillet_feat.name] = fillet_feat.id
+        return f"成功：为[{body_name}]创建圆角，半径{radius}，边{edge_idxs}"
+    except:
+        return f"创建圆角失败：{traceback.format_exc()}"
+
+def create_chamfer(body_name: str, edge_idxs: List[int], distance: float) -> str:
+    """批量倒角：指定体/边索引列表/距离"""
+    try:
+        body = select_obj("body", body_name)
+        if not body:
+            return f"失败：体[{body_name}]不存在"
+        chamfer_edges = adsk.core.ObjectCollection.create()
+        for idx in edge_idxs:
+            if idx < body.edges.count:
+                chamfer_edges.add(body.edges.item(idx))
+        chamfer_input = features.chamferFeatures.createInput(chamfer_edges, adsk.core.ValueInput.createByReal(distance))
+        chamfer_feat = features.chamferFeatures.add(chamfer_input)
+        chamfer_feat.name = f"chamfer_{body_name}"
+        obj_cache["features"][chamfer_feat.name] = chamfer_feat.id
+        return f"成功：为[{body_name}]创建倒角，距离{distance}，边{edge_idxs}"
+    except:
+        return f"创建倒角失败：{traceback.format_exc()}"
+
+def create_hole(body_name: str, x: float, y: float, z: float, dia: float, depth: float, sketch_name: str = "hole_sketch") -> str:
+    """创建孔：指定体/孔中心坐标/直径/深度，自动创建草图+拉伸切除"""
+    try:
+        body = select_obj("body", body_name)
+        if not body:
+            return f"失败：体[{body_name}]不存在"
+        # 创建草图并绘制圆
+        create_sketch("xy", sketch_name)
+        draw_circle(sketch_name, x, y, dia/2)
+        # 拉伸切除
+        res = extrude(sketch_name, depth, "cut", f"hole_{body_name}_{x}_{y}")
+        return f"成功：为[{body_name}]创建孔(中心{x},{y},{z}，直径{dia}，深度{depth})"
+    except:
+        return f"创建孔失败：{traceback.format_exc()}"
+
+def boolean_operation(target_body: str, tool_body: str, op_type: str) -> str:
+    """布尔运算：指定目标体/工具体/操作类型
+    op_type: join(合并) / cut(减去) / intersect(相交)
+    """
+    try:
+        target = select_obj("body", target_body)
+        tool = select_obj("body", tool_body)
+        if not target or not tool:
+            return f"失败：目标体[{target_body}]或工具体[{tool_body}]不存在"
+        # 映射布尔类型
+        bool_map = {
+            "join": adsk.fusion.BooleanTypes.JoinBooleanType,
+            "cut": adsk.fusion.BooleanTypes.CutBooleanType,
+            "intersect": adsk.fusion.BooleanTypes.IntersectBooleanType
+        }
+        if op_type not in bool_map:
+            return f"失败：操作类型仅支持join/cut/intersect"
+        # 创建布尔运算
+        tool_col = adsk.core.ObjectCollection.create()
+        tool_col.add(tool)
+        bool_input = features.combineFeatures.createInput(target, tool_col, bool_map[op_type])
+        bool_feat = features.combineFeatures.add(bool_input)
+        bool_feat.name = f"boolean_{op_type}_{target_body}_{tool_body}"
+        obj_cache["features"][bool_feat.name] = bool_feat.id
+        # 删除工具体缓存
+        if tool_body in obj_cache["bodies"]:
+            del obj_cache["bodies"][tool_body]
+        return f"成功：布尔{op_type}完成，目标体[{target_body}]，工具体[{tool_body}]"
+    except:
+        return f"布尔运算失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块5：全链路参数化（AI 可动态修改尺寸，模型一键更新）
+# ==========================
+def create_param(name: str, value: float, unit: str = "mm", expr: str = "") -> str:
+    """创建全局用户参数：指定名称/值/单位/表达式（支持参数关联）"""
+    try:
+        if hasattr(design.userParameters, name):
+            return f"失败：参数[{name}]已存在"
+        param = design.userParameters.add(
+            name, adsk.core.ValueInput.createByReal(value), unit, expr
+        )
+        return f"成功：创建参数[{name}] = {value}{unit}，表达式[{expr}]"
+    except:
+        return f"创建参数失败：{traceback.format_exc()}"
+
+def modify_param(name: str, value: float) -> str:
+    """修改全局参数：指定名称/新值，模型自动联动更新（AI 核心参数化能力）"""
+    try:
+        param = design.userParameters.itemByName(name)
+        if not param:
+            return f"失败：参数[{name}]不存在"
+        param.value = value
+        # 刷新模型
+        design.refresh()
+        return f"成功：修改参数[{name}] = {value}{param.unit}，模型已自动更新"
+    except:
+        return f"修改参数失败：{traceback.format_exc()}"
+
+def link_param(feat_name: str, param_name: str, param_type: str = "distance") -> str:
+    """参数关联：将特征尺寸与全局参数绑定（如拉伸深度→全局参数）"""
+    try:
+        feat = select_obj("feature", feat_name)
+        param = design.userParameters.itemByName(param_name)
+        if not feat or not param:
+            return f"失败：特征[{feat_name}]或参数[{param_name}]不存在"
+        # 绑定拉伸/旋转/圆角等常见特征尺寸
+        if param_type == "distance" and hasattr(feat, "extentOne"):
+            feat.extentOne.distance.value = param.value
+        elif param_type == "radius" and hasattr(feat, "radius"):
+            feat.radius.value = param.value
+        elif param_type == "angle" and hasattr(feat, "angle"):
+            feat.angle.value = param.value
+        design.refresh()
+        return f"成功：将[{feat_name}]的{param_type}与参数[{param_name}]绑定"
+    except:
+        return f"参数关联失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块6：装配体能力（AI 可创建/组合多零件，添加约束）
+# ==========================
+def create_component(comp_name: str) -> str:
+    """创建装配体组件：指定组件名称，生成独立零件文件"""
+    try:
+        comp = root_comp.occurrences.addNewComponent(adsk.core.Matrix3D.create())
+        comp.component.name = comp_name
+        obj_cache["assemblies"][comp_name] = comp.id
+        # 切换到组件编辑
+        design.activeComponent = comp.component
+        return f"成功：创建装配组件[{comp_name}]，已切换到组件编辑模式"
+    except:
+        return f"创建组件失败：{traceback.format_exc()}"
+
+def insert_component(comp_path: str, x: float=0, y: float=0, z: float=0) -> str:
+    """插入外部零件：指定零件路径/插入坐标，支持STEP/SAT/F3D"""
+    try:
+        # 创建变换矩阵（指定插入位置）
+        mat = adsk.core.Matrix3D.create()
+        mat.translation = adsk.core.Vector3D.create(x, y, z)
+        # 插入组件
+        comp = root_comp.occurrences.addByFilePath(comp_path, mat)
+        obj_cache["assemblies"][comp.name] = comp.id
+        return f"成功：插入组件[{comp.name}]，位置({x},{y},{z})，路径[{comp_path}]"
+    except:
+        return f"插入组件失败：{traceback.format_exc()}"
+
+def add_asm_constraint(c_type: str, comp1: str, geom1: str, comp2: str, geom2: str, value: float=0) -> str:
+    """添加装配约束：AI 核心装配能力，支持所有主流约束
+    c_type: coincident(重合) / parallel(平行) / perpendicular(垂直) / distance(距离) / angle(角度)
+    geom1/geom2: 约束几何（face/edge/axis/origin）
+    """
+    try:
+        # 获取组件
+        occ1 = root_comp.occurrences.itemByName(comp1)
+        occ2 = root_comp.occurrences.itemByName(comp2)
+        if not occ1 or not occ2:
+            return f"失败：组件[{comp1}]或[{comp2}]不存在"
+        # 映射约束类型/几何
+        c_map = {
+            "coincident": adsk.fusion.AsstConstraintTypes.CoincidentConstraintType,
+            "parallel": adsk.fusion.AsstConstraintTypes.ParallelConstraintType,
+            "perpendicular": adsk.fusion.AsstConstraintTypes.PerpendicularConstraintType,
+            "distance": adsk.fusion.AsstConstraintTypes.DistanceConstraintType,
+            "angle": adsk.fusion.AsstConstraintTypes.AngleConstraintType
+        }
+        geom_map = {"face": 0, "edge": 1, "axis": 2, "origin": 3}
+        if c_type not in c_map or geom1 not in geom_map or geom2 not in geom_map:
+            return f"失败：约束类型/几何不支持"
+        # 获取约束几何（默认取第一个面/边/轴）
+        def get_geom(occ, g_type):
+            if g_type == "face": return occ.component.bRepBodies.item(0).faces.item(0)
+            elif g_type == "edge": return occ.component.bRepBodies.item(0).edges.item(0)
+            elif g_type == "axis": return occ.component.xAxis
+            elif g_type == "origin": return occ.component.originPoint
+        geom1_obj = get_geom(occ1, geom1)
+        geom2_obj = get_geom(occ2, geom2)
+        # 创建约束
+        asm_constraints = root_comp.assemblyConstraints
+        if c_type in ["distance", "angle"]:
+            const_input = asm_constraints.createInput(
+                c_map[c_type],
+                adsk.core.ValueInput.createByReal(value if c_type=="distance" else math.radians(value))
+            )
+        else:
+            const_input = asm_constraints.createInput(c_map[c_type])
+        const_input.setGeometry(geom1_obj, occ1, geom2_obj, occ2)
+        asm_constraints.add(const_input)
+        return f"成功：添加{c_type}约束，[{comp1}({geom1})]→[{comp2}({geom2})]，值{value}"
+    except:
+        return f"添加装配约束失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块7：工程图+全格式导出（AI 闭环：建模→出图→导出）
+# ==========================
+def create_drawing(dwg_name: str, sheet_size: str = "A4") -> str:
+    """创建工程图：指定名称/图纸尺寸（A4/A3/A2/A1/A0）"""
+    try:
+        # 创建工程图文档
+        dwg_doc = app.documents.add(adsk.core.DocumentTypes.DrawingDocumentType)
+        drawing = adsk.fusion.Drawing.cast(dwg_doc.activeProduct)
+        # 设置图纸尺寸
+        sheet = drawing.sheets.item(0)
+        sheet.name = dwg_name
+        size_map = {"A4": (210,297), "A3": (297,420), "A2": (420,594), "A1": (594,841), "A0": (841,1189)}
+        if sheet_size in size_map:
+            sheet.width = size_map[sheet_size][0]
+            sheet.height = size_map[sheet_size][1]
+        return f"成功：创建工程图[{dwg_name}]，尺寸{sheet_size}，已切换到工程图模式"
+    except:
+        return f"创建工程图失败：{traceback.format_exc()}"
+
+def add_drawing_view(view_type: str, dwg_name: str, x: float=50, y: float=50, scale: float=1.0) -> str:
+    """添加工程图视图：指定视图类型/图纸名/位置/比例
+    view_type: front(主视图) / top(俯视图) / right(右视图) / isometric(等轴测)
+    """
+    try:
+        drawing = adsk.fusion.Drawing.cast(app.activeProduct)
+        sheet = drawing.sheets.itemByName(dwg_name)
+        if not sheet:
+            return f"失败：图纸[{dwg_name}]不存在"
+        # 映射视图类型
+        view_map = {
+            "front": adsk.fusion.ViewTypes.FrontViewType,
+            "top": adsk.fusion.ViewTypes.TopViewType,
+            "right": adsk.fusion.ViewTypes.RightViewType,
+            "isometric": adsk.fusion.ViewTypes.IsometricViewType
+        }
+        if view_type not in view_map:
+            return f"失败：视图类型仅支持front/top/right/isometric"
+        # 添加视图
+        view_input = sheet.views.createInput(design, view_map[view_type])
+        view_input.position = adsk.core.Point2D.create(x, y)
+        view_input.scale = scale
+        sheet.views.add(view_input)
+        return f"成功：添加{view_type}视图，位置({x},{y})，比例{scale}:1"
+    except:
+        return f"添加视图失败：{traceback.format_exc()}"
+
+def auto_dimension(dwg_name: str, view_name: str) -> str:
+    """自动尺寸标注：指定图纸/视图，AI 自动标注所有尺寸"""
+    try:
+        drawing = adsk.fusion.Drawing.cast(app.activeProduct)
+        sheet = drawing.sheets.itemByName(dwg_name)
+        view = sheet.views.itemByName(view_name)
+        if not sheet or not view:
+            return f"失败：图纸[{dwg_name}]或视图[{view_name}]不存在"
+        # 自动标注线性/径向/角度尺寸
+        dims = view.dimensions
+        dims.autoDimension(True, True, True)
+        return f"成功：为[{view_name}]自动标注所有尺寸（线性/径向/角度）"
+    except:
+        return f"自动标注失败：{traceback.format_exc()}"
+
+def export_model(file_path: str, file_type: str = "step") -> str:
+    """全格式导出：指定路径/格式，支持建模/装配/工程图导出
+    file_type: step/stl/iges/sat/f3d/pdf/dxf (覆盖所有工业格式)
+    """
+    try:
+        export_mgr = design.exportManager if design else adsk.fusion.Drawing.cast(app.activeProduct).exportManager
+        # 映射导出格式
+        if file_type == "step":
+            opt = export_mgr.createSTEPExportOptions(file_path)
+        elif file_type == "stl":
+            opt = export_mgr.createSTLExportOptions(file_path)
+            opt.isBinary = True  # 二进制STL，体积更小
+        elif file_type == "iges":
+            opt = export_mgr.createIGESExportOptions(file_path)
+        elif file_type == "sat":
+            opt = export_mgr.createSATExportOptions(file_path)
+        elif file_type == "f3d":
+            app.activeDocument.saveAs(file_path, adsk.core.SaveAsTypes.FusionSaveAsType)
+            return f"成功：导出F3D文件到[{file_path}]"
+        elif file_type == "pdf":
+            opt = export_mgr.createPDFExportOptions(file_path)
+        elif file_type == "dxf":
+            opt = export_mgr.createDXFExportOptions(file_path)
+        else:
+            return f"失败：导出格式仅支持step/stl/iges/sat/f3d/pdf/dxf"
+        export_mgr.execute(opt)
+        return f"成功：导出{file_type.upper()}文件到[{file_path}]"
+    except:
+        return f"导出失败：{traceback.format_exc()}"
+
+def batch_export(comp_names: List[str], save_path: str, file_type: str = "step") -> str:
+    """AI 批量导出：指定组件列表/保存路径/格式，一次性导出多个零件"""
+    try:
+        success_count = 0
+        for comp in comp_names:
+            if comp in obj_cache["assemblies"]:
+                # 切换到组件并导出
+                design.activeComponent = root_comp.occurrences.itemByName(comp).component
+                file_path = f"{save_path}/{comp}.{file_type.lower()}"
+                export_model(file_path, file_type)
+                success_count +=1
+        return f"批量导出完成：成功{success_count}个，总{len(comp_names)}个，保存路径[{save_path}]"
+    except:
+        return f"批量导出失败：{traceback.format_exc()}"
+
+# ==========================
+# 模块8：AI Agent 标准化调用封装（JSON Schema，适配所有Agent）
+# ==========================
+def tool_call(call_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    AI Agent 标准化工具调用入口：传入JSON，统一返回JSON
+    call_data示例：
+    {
+        "tool_name": "create_box",
+        "params": {"name": "base", "x": 50, "y": 50, "z": 20}
+    }
+    """
+    try:
+        tool_name = call_data.get("tool_name")
+        params = call_data.get("params", {})
+        # 映射工具函数
+        tool_map = {
+            "init_design": init_design,
+            "get_scene_info": get_scene_info,
+            "create_sketch": create_sketch,
+            "create_box": create_box,
+            "create_cylinder": create_cylinder,
+            "create_sphere": create_sphere,
+            "extrude": extrude,
+            "revolve": revolve,
+            "sweep": sweep,
+            "loft": loft,
+            "create_shell": create_shell,
+            "create_fillet": create_fillet,
+            "boolean_operation": boolean_operation,
+            "create_param": create_param,
+            "modify_param": modify_param,
+            "create_component": create_component,
+            "add_asm_constraint": add_asm_constraint,
+            "create_drawing": create_drawing,
+            "export_model": export_model,
+            "batch_export": batch_export
+        }
+        if tool_name not in tool_map:
+            return {"status": "error", "msg": f"工具[{tool_name}]不存在"}
+        # 执行工具并返回结果
+        result = tool_map[tool_name](**params)
+        return {
+            "status": "success" if not ("失败" in str(result)) else "error",
+            "tool_name": tool_name,
+            "params": params,
+            "result": result,
+            "obj_cache": obj_cache  # 返给AI最新对象缓存
+        }
+    except:
+        return {
+            "status": "error",
+            "tool_name": call_data.get("tool_name"),
+            "msg": f"工具调用失败：{traceback.format_exc()}"
+        }
