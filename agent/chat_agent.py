@@ -59,7 +59,7 @@ class ChatAgent:
         self.user_input = user_input
         self.tools = TOOL_REGISTRY
         self.max_steps = 100
-        self.debug = False  # 调试模式
+        self.debug = True # 调试模式
         
     def build_prompt(self) -> str:
         """构建思考提示词

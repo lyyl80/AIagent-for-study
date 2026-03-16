@@ -66,9 +66,9 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
     ),
     "fusion360": (
         fusion360_tool,
-        "与Fusion360进行交互。参数: tool_name - 要执行的Fusion360命令，params - 要执行的命令字符串 相关参数请查询D:\Python\Doc\AIagent\tools\fusion工具描述.txt",
+        "与Fusion360进行交互。参数: tool_action - 要执行的Fusion360命令，params - 要执行的命令字符串 相关参数请查询D:\Python\Doc\AIagent\tools\fusion工具描述.txt",
         {
-            "required_params": ["tool_name", "params"],
+            "required_params": ["tool_action", "params"],
             "optional_params": []
         }
     ),

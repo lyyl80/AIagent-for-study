@@ -385,7 +385,7 @@ def fusion360_tool(**kwargs):
     :param kwargs: 工具参数
     :return: 工具执行结果
     """
-    tool_name = kwargs.get("tool_name")
+    tool_name = kwargs.get("tool_action")
     params = kwargs.get("params")
     url = "http://127.0.0.1:8989"
     data = {
