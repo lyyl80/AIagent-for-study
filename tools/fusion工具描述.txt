@@ -1,0 +1,145 @@
+# ==============================
+# Fusion360 工具字典
+# ==============================
+FUSION_TOOL_DATABASE = [
+    {
+        "name": "init_design",
+        "keywords": ["初始化", "新建设计", "清空", "开始"],
+        "desc": "初始化Fusion设计环境，清空当前文档",
+        "params": [],
+        "func": "init_design"
+    },
+    {
+        "name": "get_scene_info",
+        "keywords": ["场景", "信息", "状态", "查询", "当前"],
+        "desc": "获取当前设计场景信息、组件、特征列表",
+        "params": [],
+        "func": "get_scene_info"
+    },
+    {
+        "name": "create_sketch",
+        "keywords": ["草图", "创建草图", "绘制", "平面"],
+        "desc": "在指定平面创建草图",
+        "params": ["plane: str 平面名称(xy/yz/xz)"],
+        "func": "create_sketch"
+    },
+    {
+        "name": "create_box",
+        "keywords": ["立方体", "盒子", "方块", "长方体"],
+        "desc": "直接创建立方体/长方体实体",
+        "params": ["length: float", "width: float", "height: float"],
+        "func": "create_box"
+    },
+    {
+        "name": "create_cylinder",
+        "keywords": ["圆柱", "圆柱体"],
+        "desc": "直接创建圆柱体",
+        "params": ["radius: float", "height: float"],
+        "func": "create_cylinder"
+    },
+    {
+        "name": "create_sphere",
+        "keywords": ["球", "球体"],
+        "desc": "直接创建球体",
+        "params": ["radius: float"],
+        "func": "create_sphere"
+    },
+    {
+        "name": "extrude",
+        "keywords": ["拉伸", "凸台"],
+        "desc": "将草图拉伸为实体",
+        "params": ["sketch_id: str", "distance: float", "direction: str"],
+        "func": "extrude"
+    },
+    {
+        "name": "revolve",
+        "keywords": ["旋转", "回转"],
+        "desc": "将草图旋转成实体",
+        "params": ["sketch_id: str", "axis: str", "angle: float"],
+        "func": "revolve"
+    },
+    {
+        "name": "sweep",
+        "keywords": ["扫掠"],
+        "desc": "沿路径扫掠草图",
+        "params": ["profile_id: str", "path_id: str"],
+        "func": "sweep"
+    },
+    {
+        "name": "loft",
+        "keywords": ["放样"],
+        "desc": "多个截面放样生成实体",
+        "params": ["profiles: list"],
+        "func": "loft"
+    },
+    {
+        "name": "create_shell",
+        "keywords": ["抽壳", "空心", "壳体"],
+        "desc": "对实体抽壳",
+        "params": ["body_id: str", "thickness: float", "remove_faces: list"],
+        "func": "create_shell"
+    },
+    {
+        "name": "create_fillet",
+        "keywords": ["圆角", "倒圆角"],
+        "desc": "给边添加圆角",
+        "params": ["edges: list", "radius: float"],
+        "func": "create_fillet"
+    },
+    {
+        "name": "boolean_operation",
+        "keywords": ["布尔", "求和", "求差", "求交", "合并"],
+        "desc": "布尔运算：加/减/交",
+        "params": ["type: str(add/subtract/intersect)", "target: str", "tool: str"],
+        "func": "boolean_operation"
+    },
+    {
+        "name": "create_param",
+        "keywords": ["新建参数", "参数", "变量"],
+        "desc": "创建用户参数",
+        "params": ["name: str", "value: float", "unit: str"],
+        "func": "create_param"
+    },
+    {
+        "name": "modify_param",
+        "keywords": ["修改参数", "编辑参数"],
+        "desc": "修改已有参数值",
+        "params": ["name: str", "new_value: float"],
+        "func": "modify_param"
+    },
+    {
+        "name": "create_component",
+        "keywords": ["新建组件", "装配", "零件"],
+        "desc": "创建新组件",
+        "params": ["name: str"],
+        "func": "create_component"
+    },
+    {
+        "name": "add_asm_constraint",
+        "keywords": ["装配约束", "约束", "配合"],
+        "desc": "添加装配约束",
+        "params": ["type: str", "comp1: str", "comp2: str", "entity1: str", "entity2: str"],
+        "func": "add_asm_constraint"
+    },
+    {
+        "name": "create_drawing",
+        "keywords": ["工程图", "图纸", "出图"],
+        "desc": "创建工程图",
+        "params": ["model_name: str"],
+        "func": "create_drawing"
+    },
+    {
+        "name": "export_model",
+        "keywords": ["导出", "保存文件"],
+        "desc": "导出模型(step/stl/igs)",
+        "params": ["filename: str", "format: str"],
+        "func": "export_model"
+    },
+    {
+        "name": "batch_export",
+        "keywords": ["批量导出", "批量保存"],
+        "desc": "批量导出多个文件",
+        "params": ["format: str", "output_dir: str"],
+        "func": "batch_export"
+    }
+]
