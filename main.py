@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """ AI Agent - 命令行界面
 """
-import re
 import argparse
-import sys
-import os
 from typing import Optional
 from agent.chat_agent import ChatAgent
 from agent.memory import Memory ,generate_session_summary,create_session_filename
