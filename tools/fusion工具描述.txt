@@ -1,6 +1,3 @@
-# ==============================
-# Fusion360 工具字典
-# ==============================
 FUSION_TOOL_DATABASE = [
     {
         "action": "init_design",
@@ -20,126 +17,206 @@ FUSION_TOOL_DATABASE = [
         "action": "create_sketch",
         "keywords": {"草图", "创建草图", "绘制", "平面"},
         "desc": "在指定平面创建草图",
-        "params": {"plane: str 平面名称(xy/yz/xz)"},
+        "params": {
+            "plane_name": "str 平面名称(xy/yz/xz)",
+            "sketch_name": "str 草图名称（可选）"
+        },
         "func": "create_sketch"
     },
     {
         "action": "create_box",
         "keywords": {"立方体", "盒子", "方块", "长方体"},
         "desc": "直接创建立方体/长方体实体",
-        "params": {"length: float", "width: float", "height: float"},
+        "params": {
+            "name": "str 实体名称",
+            "x": "float 长度(X)",
+            "y": "float 宽度(Y)",
+            "z": "float 高度(Z)",
+            "origin_x": "float 原点X（可选）",
+            "origin_y": "float 原点Y（可选）"
+        },
         "func": "create_box"
     },
     {
         "action": "create_cylinder",
         "keywords": {"圆柱", "圆柱体"},
         "desc": "直接创建圆柱体",
-        "params": {"radius: float", "height: float"},
+        "params": {
+            "name": "str 实体名称",
+            "radius": "float 半径",
+            "height": "float 高度",
+            "origin_x": "float 原点X（可选）",
+            "origin_y": "float 原点Y（可选）"
+        },
         "func": "create_cylinder"
     },
     {
         "action": "create_sphere",
         "keywords": {"球", "球体"},
         "desc": "直接创建球体",
-        "params": {"radius: float"},
+        "params": {
+            "name": "str 实体名称",
+            "radius": "float 半径",
+            "origin_x": "float 原点X（可选）",
+            "origin_y": "float 原点Y（可选）"
+        },
         "func": "create_sphere"
     },
     {
         "action": "extrude",
         "keywords": {"拉伸", "凸台"},
         "desc": "将草图拉伸为实体",
-        "params": {"sketch_id: str", "distance: float", "direction: str"},
+        "params": {
+            "sketch_name": "str 草图名称",
+            "distance": "float 拉伸距离",
+            "op_type": "str new/cut/join（可选）",
+            "feat_name": "str 特征名称（可选）"
+        },
         "func": "extrude"
     },
     {
         "action": "revolve",
         "keywords": {"旋转", "回转"},
         "desc": "将草图旋转成实体",
-        "params": {"sketch_id: str", "axis: str", "angle: float"},
+        "params": {
+            "sketch_name": "str 草图名称",
+            "axis_plane": "str 旋转轴(x/y/z)",
+            "angle": "float 旋转角度",
+            "op_type": "str new/cut/join（可选）",
+            "feat_name": "str 特征名称（可选）"
+        },
         "func": "revolve"
     },
     {
         "action": "sweep",
         "keywords": {"扫掠"},
         "desc": "沿路径扫掠草图",
-        "params": {"profile_id: str", "path_id: str"},
+        "params": {
+            "profile_sketch": "str 轮廓草图名称",
+            "path_sketch": "str 路径草图名称",
+            "op_type": "str new/cut/join（可选）",
+            "feat_name": "str 特征名称（可选）"
+        },
         "func": "sweep"
     },
     {
         "action": "loft",
         "keywords": {"放样"},
         "desc": "多个截面放样生成实体",
-        "params": {"profiles: list"},
+        "params": {
+            "sketch_names": "list 草图名称列表",
+            "op_type": "str new/cut/join（可选）",
+            "feat_name": "str 特征名称（可选）"
+        },
         "func": "loft"
     },
     {
         "action": "create_shell",
         "keywords": {"抽壳", "空心", "壳体"},
         "desc": "对实体抽壳",
-        "params": {"body_id: str", "thickness: float", "remove_faces: list"},
+        "params": {
+            "body_name": "str 实体名称",
+            "thickness": "float 壁厚",
+            "remove_faces": "list 要移除的面索引（可选）"
+        },
         "func": "create_shell"
     },
     {
         "action": "create_fillet",
         "keywords": {"圆角", "倒圆角"},
         "desc": "给边添加圆角",
-        "params": {"edges: list", "radius: float"},
+        "params": {
+            "body_name": "str 实体名称",
+            "edge_idxs": "list 边索引列表",
+            "radius": "float 圆角半径"
+        },
         "func": "create_fillet"
     },
     {
         "action": "boolean_operation",
         "keywords": {"布尔", "求和", "求差", "求交", "合并"},
         "desc": "布尔运算：加/减/交",
-        "params": {"type: str(add/subtract/intersect)", "target: str", "tool: str"},
+        "params": {
+            "target_body": "str 目标体名称",
+            "tool_body": "str 工具体名称",
+            "op_type": "str join/cut/intersect"
+        },
         "func": "boolean_operation"
     },
     {
         "action": "create_param",
         "keywords": {"新建参数", "参数", "变量"},
         "desc": "创建用户参数",
-        "params": {"name: str", "value: float", "unit: str"},
+        "params": {
+            "name": "str 参数名",
+            "value": "float 参数值",
+            "unit": "str 单位（默认mm）",
+            "expr": "str 表达式（可选）"
+        },
         "func": "create_param"
     },
     {
         "action": "modify_param",
         "keywords": {"修改参数", "编辑参数"},
         "desc": "修改已有参数值",
-        "params": {"name: str", "new_value: float"},
+        "params": {
+            "name": "str 参数名",
+            "value": "float 新值"
+        },
         "func": "modify_param"
     },
     {
         "action": "create_component",
         "keywords": {"新建组件", "装配", "零件"},
         "desc": "创建新组件",
-        "params": {"name: str"},
+        "params": {
+            "comp_name": "str 组件名称"
+        },
         "func": "create_component"
     },
     {
         "action": "add_asm_constraint",
         "keywords": {"装配约束", "约束", "配合"},
         "desc": "添加装配约束",
-        "params": {"type: str", "comp1: str", "comp2: str", "entity1: str", "entity2: str"},
+        "params": {
+            "c_type": "str coincident/parallel/perpendicular/distance/angle",
+            "comp1": "str 组件1名称",
+            "geom1": "str face/edge/axis/origin",
+            "comp2": "str 组件2名称",
+            "geom2": "str face/edge/axis/origin",
+            "value": "float 距离/角度值（可选）"
+        },
         "func": "add_asm_constraint"
     },
     {
         "action": "create_drawing",
         "keywords": {"工程图", "图纸", "出图"},
         "desc": "创建工程图",
-        "params": {"model_name: str"},
+        "params": {
+            "dwg_name": "str 图纸名称",
+            "sheet_size": "str A4/A3/A2/A1/A0（可选）"
+        },
         "func": "create_drawing"
     },
     {
         "action": "export_model",
         "keywords": {"导出", "保存文件"},
-        "desc": "导出模型(step/stl/igs)",
-        "params": {"filename: str", "format: str"},
+        "desc": "导出模型(step/stl/iges/sat/f3d/pdf/dxf)",
+        "params": {
+            "file_path": "str 保存路径+文件名",
+            "file_type": "str 格式（默认step）"
+        },
         "func": "export_model"
     },
     {
         "action": "batch_export",
         "keywords": {"批量导出", "批量保存"},
         "desc": "批量导出多个文件",
-        "params": {"format: str", "output_dir: str"},
+        "params": {
+            "comp_names": "list 组件名称列表",
+            "save_path": "str 输出文件夹",
+            "file_type": "str 格式（默认step）"
+        },
         "func": "batch_export"
     }
 ]
