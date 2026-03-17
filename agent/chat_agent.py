@@ -70,8 +70,8 @@ class ChatAgent:
         """
         tools_desc = get_tool_description()
         action_schema = ACTION_SCHEMA.format(tools=tools_desc)
-        # 只使用最近3步历史记录，避免提示词过长
-        recent_history = self.history.get_recent_steps(3)
+        # 只使用最近5步历史记录，避免提示词过长
+        recent_history = self.history.get_history(5)
         return THINK_PROMPT.format(
             task=self.user_input,
             history=recent_history,
@@ -168,7 +168,6 @@ class ChatAgent:
             result: 工具执行结果
             tool_name: 工具名称
             tool_args: 工具参数
-            
         返回:
             str: 反思内容
         """
@@ -179,7 +178,6 @@ class ChatAgent:
             tool_args=tool_args
         )
         return self.llm(messages)
-    
     def execute(self, action: Dict[str, Any]) -> Tuple[Any, str, bool, bool]:
         """执行步骤：调用工具并处理结果
         
@@ -242,7 +240,7 @@ class ChatAgent:
         return (result, tool, need_user_input, failed)
     
     def step(self) -> Tuple[Dict[str, Any], bool]:
-        """单步执行：思考→执行→反思（优化版）
+        """单步执行：思考→执行→反思
         
         返回:
             Tuple[动作字典, 是否需要用户输入]
@@ -260,7 +258,7 @@ class ChatAgent:
         # 反思条件：
         # 1. 工具执行失败
         # 2. 关键操作（文件写入、内容替换）
-        # 3. 每3步反思一次（避免过度反思）
+        # 3. 每5步反思一次（避免过度反思）
         # 4. 用户明确询问或需要输入
         key_tools = ["write_file", "replace_content", "shell"]
         
@@ -275,7 +273,7 @@ class ChatAgent:
             print("定期反思检查...")
         elif need_user_input:
             should_reflect = True
-            print("需要用户输入，进行反思...")
+            print("需要用户输入")
         
         # 对于finish工具，不进行反思
         if tool_name == "finish":
@@ -330,7 +328,7 @@ class ChatAgent:
             action, need_user_input = self.step()
             
             # 检查步骤是否失败（从历史记录中获取）
-            recent_history = self.history.get_recent_steps(1)
+            recent_history = self.history.get_history(1)
             if recent_history:
                 last_step = recent_history[0]
                 failed = last_step.get("failed", False)

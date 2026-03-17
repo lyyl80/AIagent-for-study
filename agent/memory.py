@@ -94,7 +94,7 @@ class Memory:
 
     
     def add_conversation(self, conversation: Dict[str, Any]) -> None:
-        """添加步骤历史记录（兼容旧接口）
+        """添加步骤历史记录
         
         参数:
             conversation: 步骤记录字典，包含input、output、reflect等字段
@@ -138,16 +138,6 @@ class Memory:
             return self.history
         return self.history[-n:]
     
-    def get_recent_steps(self, steps: int = 3) -> List[Dict[str, Any]]:
-        """获取最近的步骤（用于提示词构建）
-        
-        参数:
-            steps: 步骤数量
-            
-        返回:
-            List[Dict[str, Any]]: 最近的步骤记录
-        """
-        return self.get_history(steps)
     
     def clear(self) -> None:
         """清空历史记录和消息"""
@@ -157,18 +147,6 @@ class Memory:
         if self.persist_path:
             self.save()
 
-    def get_messages(self, n: Optional[int] = None) -> List[Dict[str, Any]]:
-        """获取对话消息
-        
-        参数:
-            n: 返回最近n条消息，如果为None则返回全部
-            
-        返回:
-            List[Dict[str, Any]]: 对话消息列表
-        """
-        if n is None:
-            return self.history
-        return self.history[-n:]
     
     def save(self) -> None:
         """保存记忆到文件"""

@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
+
 """ AI Agent - 命令行界面
 """
-import argparse
 from typing import Optional
 from agent.chat_agent import ChatAgent
-from agent.memory import Memory ,generate_session_summary,create_session_filename
+from agent.memory import Memory
 from datetime import datetime
 
 
@@ -24,7 +23,7 @@ def run_interactive_mode( verbose: bool = False):
         session_path: 会话文件路径
         verbose: 是否显示详细输出
     """
-    print("=== OpenCode AI Agent 交互模式 ===")
+    print("===  AI Agent 交互模式 ===")
     print("输入 'exit' 或 'quit' 退出，输入 'help' 查看帮助")
     print("输入 'clear' 清空当前会话历史")
     print("输入 'list' 列出所有会话")
@@ -48,7 +47,6 @@ def run_interactive_mode( verbose: bool = False):
             
             if verbose:
                 print(f"已加载 {len(agent.history.messages)} 条对话消息, {len(agent.history.history)} 条步骤记录")
-            
             # 处理命令
             lower_input = user_input.lower()
             match lower_input:
