@@ -29,11 +29,18 @@
 ├── .env                # 环境变量配置文件（模板）
 ├── .gitignore
 │
-├── src/                 # 项目核心模块目录（代理、工具、配置等）
+├── agent/              # 代理核心模块（聊天代理、记忆管理）
+├── config/             # 配置文件与设置
+├── llm/                # 大语言模型客户端与接口
+├── prompt/             # 提示词模板管理
+├── tools/              # 工具库（文件操作、代码分析等）
+├── docs/               # 文档目录
+├── session/            # 会话持久化存储（自动生成）
+├── logs/               # 日志文件目录（自动生成）
 ├── .venv/              # Python虚拟环境（通常忽略）
 └── ...                 # 其他运行时生成的目录（如__pycache__）
 ```
-*注：这是一个典型的Python项目结构。`src/` 目录包含了代理、工具、配置等核心模块。` .venv` 是隔离的Python环境，建议在开发时使用。*
+*注：这是一个模块化的Python AI Agent项目结构。核心模块按功能分离，便于维护和扩展。`session/`和`logs/`目录会在运行时自动生成。`.venv`是隔离的Python环境，建议在开发时使用。*
 
 ## 🚀 快速开始（1分钟体验）
 
@@ -47,17 +54,26 @@
     # 安装依赖
     pip install -r requirements.txt
     ```
-2.  **运行你的第一个代理任务**
+2.  **运行交互模式**
     ```bash
-    python main.py "请列出当前目录下的所有Python文件"
+    python main.py
+    ```
+    *程序将启动交互式命令行界面，你可以直接与AI代理对话。*
+3.  **执行你的第一个代理任务**
+    在交互模式中，输入你的任务指令，例如：
+    ```
+    请列出当前目录下的所有Python文件
     ```
     *预期输出：代理将分析你的指令，调用文件系统工具，并返回找到的 `.py` 文件列表。*
-3.  **进入交互模式**
-    ```bash
-    python main.py --interactive
-    ```
-    现在，你可以像和朋友对话一样，连续向代理提出任务，例如：
-    `帮我创建一个名为 ‘hello.py’ 的文件，内容为打印欢迎信息`
+
+**进阶用法**：你也可以在Python代码中直接使用ChatAgent类：
+```python
+from agent.chat_agent import ChatAgent
+
+# 创建代理实例并执行任务
+agent = ChatAgent(user_input="请分析requirements.txt文件")
+agent.run()
+```
 
 ## 📦 完整安装与配置
 
