@@ -1,12 +1,13 @@
 from typing import Dict, Any, Optional, Tuple
 from llm.client import ModelManager
 from agent.memory import Memory
-from prompt.templates import SYSTEM_PROMPT, THINK_PROMPT, ACTION_SCHEMA, REFLECT_PROMPT
+from prompt.templates import *
 from tools import call_tool, get_tool_description, TOOL_REGISTRY
 from config import *
 import sys
 import time
 import threading
+from config.settings import *
 
 model_manager = ModelManager()
 
@@ -59,7 +60,7 @@ class ChatAgent:
         self.user_input = user_input
         self.tools = TOOL_REGISTRY
         self.max_steps = 100
-        self.debug = True # 调试模式
+        self.debug = Debugmode # 调试模式
         
     def build_prompt(self) -> str:
         """构建思考提示词

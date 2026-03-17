@@ -5,4 +5,5 @@ DEEP_SEEK_API_KEY = os.getenv("DEEP_SEEK_API_KEY")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.ai")
 LLM_URL = os.getenv("LLM_URL", "http://localhost:11434")
 MODEL_ING = "deepseek-reasoner"
+Debugmode = False
 
