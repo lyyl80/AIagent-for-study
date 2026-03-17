@@ -8,57 +8,6 @@ from agent.memory import Memory ,generate_session_summary,create_session_filenam
 from datetime import datetime
 
 
-def parse_arguments():
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(
-        description=" AI Agent - 智能代理系统",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-使用示例:
-  %(prog)s --interactive                # 进入交互模式
-  %(prog)s --session my_session         # 使用会话文件
-  %(prog)s --list-tools                 # 列出可用工具
-        """
-    )
-     
-    # 运行模式
-    mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument(
-        "-i", "--interactive",
-        action="store_true",
-        help="进入交互模式"
-    )
-    # 会话管理
-    parser.add_argument(
-        "-s", "--session",
-        help="会话文件路径，用于保存/加载对话历史"
-    )
-    parser.add_argument(
-        "--clear-session",
-        action="store_true",
-        help="清除会话历史"
-    )
-    
-    # 工具管理
-    parser.add_argument(
-        "--list-tools",
-        action="store_true",
-        help="列出所有可用工具"
-    )
-    
-    # 输出控制
-    parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="显示详细输出"
-    )
-    parser.add_argument(
-        "--no-color",
-        action="store_true",
-        help="禁用颜色输出"
-    )
-    
-    return parser.parse_args()
 def list_tools():
     """列出所有可用工具"""
     from tools import list_tools, get_tool_description
@@ -193,14 +142,8 @@ def run_interactive_mode( verbose: bool = False):
 
 def main():
     """主函数"""
-    args = parse_arguments()
-    
-    # 列出工具
-    if args.list_tools:
-        list_tools()
-        return
 # 默认进入交互模式
-    run_interactive_mode(verbose=args.verbose)
+    run_interactive_mode(verbose=False)
 
 
 if __name__ == "__main__":

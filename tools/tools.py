@@ -379,21 +379,6 @@ def web_search_tool(**kwargs):
     except Exception as e:
         return f"搜索过程中发生错误: {str(e)}"
 
-def fusion360_tool(**kwargs):
-    """
-    调用Fusion360工具
-    :param kwargs: 工具参数
-    :return: 工具执行结果
-    """
-    tool_name = kwargs.get("tool_action")
-    params = kwargs.get("params")
-    url = "http://127.0.0.1:8989"
-    data = {
-        "tool_name": tool_name,
-        "params": params
-    }
-    response = requests.post(url, json=data)
-    return response.json()
 def finish_tool(**kwargs):
     """
     结束任务，可选地提供结语消息
