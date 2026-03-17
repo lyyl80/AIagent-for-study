@@ -198,7 +198,7 @@ graph TD
 A: 请确保已安装所有依赖：`pip install -r requirements.txt`。如果问题依旧，请检查Python版本（要求3.8+）和虚拟环境是否激活。
 
 **Q: 代理似乎没有正确理解我的指令或调用了错误的工具**  
-A: 创建ChatAgent实例时设置 `debug=True` 可查看详细执行过程，帮助诊断问题。同时检查工具的描述是否清晰准确，这直接影响LLM对工具的选择。
+A: 在config文件夹setting中令 `debugmode=True` 可查看详细执行过程，帮助诊断问题。同时检查工具的描述是否清晰准确，这直接影响LLM对工具的选择。
 
 **Q: 如何更换为其他LLM提供商或本地模型？**  
 A: 本项目支持DeepSeek、OpenAI和本地Ollama模型。修改 `.env` 文件中的 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` 或 `LLM_URL` 配置。详细配置请参考 `config/settings.py` 和 `llm/client.py` 中的代码。
