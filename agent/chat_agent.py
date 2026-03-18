@@ -349,11 +349,24 @@ class ChatAgent:
             if need_user_input:
                 try:
                     user_input = input("You: ")
+                    
+                    # 检查是否是退出命令
+                    if user_input.lower() in ['exit', 'quit']:
+                        print("收到退出命令，结束任务。")
+                        break
+                    
+                    # 将用户输入添加到历史记录中，作为对需要输入的回应
                     self.history.add_conversation({
                         "input": {"tool": "user", "tool_args": {"message": user_input}},
                         "output": user_input,
-                        "reflect": "用户输入"
+                        "reflect": "用户输入回应"
                     })
+                    
+                    # 更新当前用户输入，以便下一次思考可以参考
+                    self.user_input = user_input
+                    
+                    # 跳过本次循环的其余部分，继续下一步
+                    continue
                 except (KeyboardInterrupt, EOFError):
                     print("\n用户中断输入")
                     # 添加中断记录

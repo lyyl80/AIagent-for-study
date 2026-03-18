@@ -71,6 +71,14 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
             "required_params": [],
             "optional_params": ["response"]
         }
+    ),
+    "weather": (
+        weather_tool,
+        "查询指定城市的天气信息。参数: city - 城市名称",
+        {
+            "required_params": ["city"],
+            "optional_params": []
+        }
     )
 }
 

@@ -389,3 +389,40 @@ def finish_tool(**kwargs):
     if response:
         return response
     return "任务完成"
+
+def weather_tool(**kwargs):
+    """
+    查询指定城市的天气信息
+    :param city: 城市名称
+    :return: 天气信息
+    """
+    try:
+        city = kwargs.get("city")
+        if not city:
+            return "错误: 缺少城市名称参数 'city'"
+        
+        # 使用免费的天气API - wttr.in
+        import urllib.parse
+        encoded_city = urllib.parse.quote(city.encode('utf-8'))
+        url = f"http://wttr.in/{encoded_city}?format=3"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            weather_info = response.text.strip()
+            # 如果API返回的是错误信息，则给出提示
+            if "Unknown location" in weather_info or "Sorry" in weather_info:
+                return f"无法获取 {city} 的天气信息，请检查城市名称是否正确。"
+            return f"{city} 的天气: {weather_info}"
+        else:
+            # 如果API失败，返回错误信息
+            return f"获取 {city} 天气信息失败，状态码: {response.status_code}。可能的原因: 网络问题或API服务不可用。"
+    
+    except requests.RequestException as e:
+        return f"网络请求错误: {str(e)}"
+    except Exception as e:
+        return f"查询天气时发生错误: {str(e)}"
