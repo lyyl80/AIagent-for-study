@@ -79,6 +79,14 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
             "required_params": ["city"],
             "optional_params": []
         }
+    ),
+    "speaking": (
+        speaking_tool,
+        "使用文字转语音功能朗读文本。参数: text - 需要转换成语音的文本内容",
+        {
+            "required_params": ["text"],
+            "optional_params": []
+        }
     )
 }
 

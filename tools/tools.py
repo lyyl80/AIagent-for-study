@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import chardet
+import pyttsx3
 
 
 def read_file_tool(**kwargs):
@@ -276,6 +277,24 @@ def web_content_tool(**kwargs):
         
     except Exception as e:
         return f"获取网页内容时发生错误: {str(e)}"
+def speaking_tool(**kwargs):
+    """
+    使用pyttsx3进行文字转语音
+    :param text: 需要转换的文本
+    :return: 转换后的音频文件
+    """
+    
+    engine = pyttsx3.init()
+    engine.setProperty('rate', 150)
+    engine.setProperty('volume', 1.0)
+    engine.setProperty('voice', 'zh')
+    engine.say(kwargs["text"])
+    engine.runAndWait()
+
+    return "success"
+
+
+    
 
 
 def web_search_tool(**kwargs):
