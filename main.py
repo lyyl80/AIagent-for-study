@@ -2,14 +2,14 @@
 """ AI Agent - 命令行界面
 """
 from typing import Optional
-from agent.chat_agent import ChatAgent
-from agent.memory import Memory
+from core.agent.chat_agent import ChatAgent
+from core.agent.memory import Memory
 from datetime import datetime
 
 
 def list_tools():
     """列出所有可用工具"""
-    from tools import list_tools, get_tool_description
+    from core.tools import list_tools, get_tool_description
     print("=== 可用工具 ===")
     tools = list_tools()
     for tool in tools:

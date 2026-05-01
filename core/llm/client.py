@@ -1,7 +1,7 @@
 from ollama import chat
 from openai import OpenAI
 import json
-from config import *
+from core.config import *
     # 模型管理类 - 遵循Ollama本地模型调用规范
 class ModelManager:
     def __init__(self):

@@ -1,13 +1,13 @@
 from typing import Dict, Any, Optional, Tuple
-from llm.client import ModelManager
-from agent.memory import Memory
-from prompt.templates import *
-from tools import call_tool, get_tool_description, TOOL_REGISTRY
-from config import *
+from core.llm.client import ModelManager
+from core.agent.memory import Memory
+from core.prompt.templates import *
+from core.tools import call_tool, get_tool_description, TOOL_REGISTRY
+from core.config import *
 import sys
 import time
 import threading
-from config.settings import *
+from core.config.settings import *
 
 model_manager = ModelManager()
 
