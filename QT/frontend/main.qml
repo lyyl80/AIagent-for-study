@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import MARS 1.0
 
 Window {
     id: root
