@@ -18,11 +18,9 @@ if __name__ == "__main__":
 
     engine = QQmlApplicationEngine()
     
-    # 添加 frontend 目录到 QML 导入路径
-    frontend_path = os.path.join(os.path.dirname(__file__), "frontend")
-    engine.addImportPath(frontend_path)
-    
-    qml_path = os.path.join(os.path.dirname(__file__), "frontend", "main.qml")
+    engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
+
+    qml_path = os.path.join(os.path.dirname(__file__), "frontend", "MARS", "main.qml")
     engine.load(QUrl.fromLocalFile(qml_path))
 
     if not engine.rootObjects():

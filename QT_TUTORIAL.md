@@ -63,20 +63,22 @@ QT/
 │   ├── session_model.py    # 第八关写
 │   └── worker.py           # 第七关写
 ├── frontend/
-│   ├── main.qml            # 第一关写
-│   ├── FluentTheme.qml     # 第二关写
-│   ├── components/
-│   │   ├── NavigationPanel.qml  # 第三关写
-│   │   ├── FluentCard.qml       # 第四关写
-│   │   ├── FluentButton.qml     # 第四关写
-│   │   ├── FluentInfoBar.qml    # 第四关写
-│   │   ├── MessageBubble.qml    # 第五关写
-│   │   └── InputBar.qml         # 第五关写
-│   └── pages/
-│       ├── ChatPage.qml         # 第五关写
-│       ├── SessionsPage.qml     # 第八关写
-│       ├── ToolsPage.qml        # 第八关写
-│       └── SettingsPage.qml     # 第八关写
+│   └── MARS/               # MARS QML 模块（qmldir 声明）
+│       ├── qmldir              # 模块定义文件
+│       ├── main.qml            # 第一关写
+│       ├── FluentTheme.qml     # 第二关写
+│       ├── components/
+│       │   ├── NavigationPanel.qml  # 第三关写
+│       │   ├── FluentCard.qml       # 第四关写
+│       │   ├── FluentButton.qml     # 第四关写
+│       │   ├── FluentInfoBar.qml    # 第四关写
+│       │   ├── MessageBubble.qml    # 第五关写
+│       │   └── InputBar.qml         # 第五关写
+│       └── pages/
+│           ├── ChatPage.qml         # 第五关写
+│           ├── SessionsPage.qml     # 第八关写
+│           ├── ToolsPage.qml        # 第八关写
+│           └── SettingsPage.qml     # 第八关写
 ├── resources/
 │   └── icons/                   # SVG 图标，可以先用 unicode 占位
 └── QML_TUTORIAL.md          # ← 你现在看的这个（删掉也行）
@@ -235,251 +237,43 @@ QtObject {
 }
 ```
 
-然后修改 `QT/frontend/main.qml` 引入主题：
+### 关键一步：QML 模块 + `qmldir`
 
-```qml
-import QtQuick
-import QtQuick.Controls
+QML 需要模块化才能跨文件引用类型。把 `main.qml`、`FluentTheme.qml`、`components/`、`pages/` 全部挪进 `frontend/MARS/`，创建 `qmldir` 声明为 `MARS` 模块。
 
-Window {
-    width: 960
-    height: 640
-    minimumWidth: 800
-    minimumHeight: 500
-    visible: true
-    title: "MARS AI Agent"
-    color: theme.bgColor
+写入 `QT/frontend/MARS/qmldir`：
 
-    // 实例化主题，整个应用共用
-    readonly property FluentTheme theme: FluentTheme {}
-
-    Label {
-        anchors.centerIn: parent
-        text: "Hello MARS!"
-        font.pixelSize: 24
-        color: theme.textColor
-    }
-
-    // 测试主题切换：按 T 键切换亮/暗
-    Shortcut {
-        sequence: "T"
-        onActivated: theme.darkMode = !theme.darkMode
-    }
-}
+```
+module MARS
+FluentTheme 1.0 FluentTheme.qml
+NavigationPanel 1.0 components/NavigationPanel.qml
+FluentCard 1.0 components/FluentCard.qml
+FluentButton 1.0 components/FluentButton.qml
+FluentInfoBar 1.0 components/FluentInfoBar.qml
+MessageBubble 1.0 components/MessageBubble.qml
+InputBar 1.0 components/InputBar.qml
+ChatPage 1.0 pages/ChatPage.qml
+SessionsPage 1.0 pages/SessionsPage.qml
+ToolsPage 1.0 pages/ToolsPage.qml
+SettingsPage 1.0 pages/SettingsPage.qml
 ```
 
-因为 QML 里引用了 `FluentTheme` 类型但没有 import，需要把它注册为 QML 模块或者在 main.py 里处理。
-
-最简单的方式：在 `main.py` 中，加载 QML 前添加导入路径：
+同时在 `main.py` 注册导入路径、加载 `MARS/main.qml`：
 
 ```python
 engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
+qml_path = os.path.join(os.path.dirname(__file__), "frontend", "MARS", "main.qml")
+engine.load(QUrl.fromLocalFile(qml_path))
 ```
 
-或者直接用相对路径 import。QML 里可以这样引用同目录文件：
+### 更新 main.qml
 
-```qml
-// main.qml 最上方
-import "FluentTheme.qml" as Theme
-```
-
-但是实例化时需要写成 `Theme.FluentTheme {}`。更好的方式是用 `qmldir` 或直接在 Python 侧设为 context property。
-
-对于我们这个教程，推荐 **直接在 main.py 中创建主题对象并注入**，这样 Python 代码后面也能控制主题：
-
-修改 `QT/main.py`（第一步改造）：
-
-```python
-import sys
-import os
-
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterSingletonType
-from PySide6.QtCore import QObject, Property, Signal
-
-# 主题桥接：让 QML 可读可写 theme.darkMode
-class FluentTheme(QObject):
-    darkModeChanged = Signal(bool)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._darkMode = False
-
-    @Property(bool, notify=darkModeChanged)
-    def darkMode(self):
-        return self._darkMode
-
-    @darkMode.setter
-    def darkMode(self, value):
-        if self._darkMode != value:
-            self._darkMode = value
-            self.darkModeChanged.emit(value)
-
-
-if __name__ == "__main__":
-    app = QGuiApplication(sys.argv)
-    app.setApplicationName("MARS AI Agent")
-    app.setOrganizationName("MARS")
-
-    theme = FluentTheme()
-
-    engine = QQmlApplicationEngine()
-    engine.rootContext().setContextProperty("theme", theme)
-
-    engine.load(os.path.join(os.path.dirname(__file__), "frontend", "main.qml"))
-
-    if not engine.rootObjects():
-        sys.exit(-1)
-
-    sys.exit(app.exec())
-```
-
-相应地，`main.qml` 改为（不再自己实例化 `FluentTheme`，而是用 Python 注入的 `theme`）：
+`QT/frontend/MARS/main.qml`：
 
 ```qml
 import QtQuick
 import QtQuick.Controls
-
-Window {
-    width: 960
-    height: 640
-    minimumWidth: 800
-    minimumHeight: 500
-    visible: true
-    title: "MARS AI Agent"
-    color: theme.bgColor
-
-    Label {
-        anchors.centerIn: parent
-        text: "Hello MARS!"
-        font.pixelSize: 24
-        color: theme.textColor
-    }
-
-    Shortcut {
-        sequence: "T"
-        onActivated: theme.darkMode = !theme.darkMode
-    }
-}
-```
-
-等等——`theme.bgColor` 这样的属性，需要从 Python 的 `FluentTheme` 类暴露。但是我们又不想在 Python 里把所有颜色属性都写一遍（那太繁琐了）。
-
-**最佳方案**：在 Python 中只暴露 `darkMode` 和 `accentColor` 两个可写属性，其他颜色作为 QML 端的 `readonly property` 依赖这两个值计算。
-
-**所以真正的双轨制**：
-
-```
-Python FluentTheme(QObject):
-  - darkMode: bool (可读写，emit darkModeChanged)
-  - accentColor: str (可读写)
-
-QML 中通过 theme.darkMode 和 theme.accentColor 绑定，
-用 Qt.binding() 或直接在 QML 里写一个 ThemeHelper.qml 计算颜色。
-```
-
-为了减少复杂度，我们这样做：
-
-**最终方案——纯 QML 主题 + Python 只控制开关**：
-
-`QT/frontend/FluentTheme.qml`（纯 QML，上面已经写好了）
-
-`QT/main.py` 中，把 Python 的 `FluentTheme` 类改为只暴露一个 `toggleDarkMode()` 方法和一个 `darkMode` 属性：
-
-```python
-class ThemeController(QObject):
-    darkModeChanged = Signal(bool)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._darkMode = False
-
-    @Property(bool, notify=darkModeChanged)
-    def darkMode(self):
-        return self._darkMode
-
-    @darkMode.setter
-    def darkMode(self, value):
-        if self._darkMode != value:
-            self._darkMode = value
-            self.darkModeChanged.emit(value)
-
-    @Slot()
-    def toggle(self):
-        self.darkMode = not self._darkMode
-```
-
-然后在 `main.qml` 中：
-
-```qml
-import QtQuick
-import QtQuick.Controls
-import "FluentTheme.qml" as FluentThemeObj
-
-Window {
-    // 在 QML 端创建主题实例
-    readonly property FluentThemeObj.FluentTheme theme: FluentThemeObj.FluentTheme {}
-
-    // 监听 Python side 的 darkMode 变化
-    Connections {
-        target: themeController
-        function onDarkModeChanged() {
-            theme.darkMode = themeController.darkMode
-        }
-    }
-
-    Component.onCompleted: {
-        // 初始化同步
-        theme.darkMode = themeController.darkMode
-    }
-
-    // ...
-}
-```
-
-这太绕了。让我们**从头简化：只用 QML 端的主题**，Python 不插手主题。主题切换快捷键绑定在 QML 内部。Python 只需要加载 QML 即可。
-
-**真正落地方案（简单、清晰、可直接用）**：
-
-`QT/main.py`：
-
-```python
-import sys
-import os
-
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QUrl
-
-if __name__ == "__main__":
-    app = QGuiApplication(sys.argv)
-    app.setApplicationName("MARS AI Agent")
-    app.setOrganizationName("MARS")
-
-    engine = QQmlApplicationEngine()
-    qml_path = os.path.join(os.path.dirname(__file__), "frontend", "main.qml")
-    engine.load(QUrl.fromLocalFile(qml_path))
-
-    if not engine.rootObjects():
-        sys.exit(-1)
-
-    sys.exit(app.exec())
-```
-
-`QT/frontend/main.qml`：
-
-```qml
-import QtQuick
-import QtQuick.Controls
-import "FluentTheme.qml" as FluentThemeObj
+import MARS 1.0
 
 Window {
     id: window
@@ -490,25 +284,11 @@ Window {
     visible: true
     title: "MARS AI Agent"
 
-    // ====== 全局主题实例 ======
-    readonly property FluentThemeObj.FluentTheme theme: FluentThemeObj.FluentTheme {}
+    readonly property FluentTheme theme: FluentTheme {}
 
-    // 根容器背景跟随主题
-    color: theme.bgColor
-
-    // ====== 快捷键切换主题 ======
-    Shortcut {
-        sequence: "T"
-        onActivated: theme.darkMode = !theme.darkMode
-    }
-
-    // ====== 临时占位 ======
     Rectangle {
-        anchors.centerIn: parent
-        width: 300
-        height: 200
-        radius: theme.cardRadius
-        color: theme.cardColor
+        anchors.fill: parent
+        color: theme.bgColor
 
         Label {
             anchors.centerIn: parent
@@ -516,6 +296,11 @@ Window {
             font.pixelSize: 24
             color: theme.textColor
         }
+    }
+
+    Shortcut {
+        sequence: "T"
+        onActivated: theme.darkMode = !theme.darkMode
     }
 }
 ```
@@ -553,7 +338,7 @@ python QT/main.py
 ```qml
 import QtQuick
 import QtQuick.Layouts
-import ".." as Global
+import MARS 1.0
 
 Item {
     id: root
@@ -731,14 +516,13 @@ Item {
 
 ### 在 main.qml 中使用导航面板
 
-修改 `QT/frontend/main.qml`：
+修改 `QT/frontend/MARS/main.qml`（添加 `QtQuick.Layouts`）：
 
 ```qml
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "FluentTheme.qml" as FluentThemeObj
-import "components"
+import MARS 1.0
 
 Window {
     id: window
@@ -749,7 +533,7 @@ Window {
     visible: true
     title: "MARS AI Agent"
 
-    readonly property FluentThemeObj.FluentTheme theme: FluentThemeObj.FluentTheme {}
+    readonly property FluentTheme theme: FluentTheme {}
     color: theme.bgColor
 
     Shortcut {
@@ -2623,7 +2407,7 @@ ScrollBar.vertical: ScrollBar {
 ## 附：常见问题
 
 **Q: QML 报错 "module is not defined"**
-A: 检查 `import` 路径。`components/` 下的文件用 `import "../components"` 或确保 `qmldir` 文件存在。最简单的做法是在每个文件中直接用相对路径 import：`import "components"` 如果当前文件在 `frontend/` 下。
+A: 确保 `QT/frontend/MARS/qmldir` 文件存在且格式正确（第一行 `module MARS`），并在 `main.py` 中调用了 `engine.addImportPath("frontend/")`。QML 里用 `import MARS 1.0`。
 
 **Q: Worker 启动了但 LLM 没响应**
 A: 检查 `.env` 文件中的 API Key。可以先用 `python main.py`（CLI 模式）验证 LLM 连通性。
