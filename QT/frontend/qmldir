@@ -1,0 +1,12 @@
+module MARS
+FluentTheme 1.0 FluentTheme.qml
+NavigationPanel 1.0 components/NavigationPanel.qml
+FluentCard 1.0 components/FluentCard.qml
+FluentButton 1.0 components/FluentButton.qml
+FluentInfoBar 1.0 components/FluentInfoBar.qml
+MessageBubble 1.0 components/MessageBubble.qml
+InputBar 1.0 components/InputBar.qml
+ChatPage 1.0 pages/ChatPage.qml
+SessionsPage 1.0 pages/SessionsPage.qml
+ToolsPage 1.0 pages/ToolsPage.qml
+SettingsPage 1.0 pages/SettingsPage.qml
