@@ -35,19 +35,40 @@ Window {
             
           }
        }
+       
        StackLayout {
             id: pageStack
             Layout.fillWidth: true
             Layout.fillHeight: true
 
             // 占位页面
-            Rectangle {
-                color: theme.bgColor
+            ColumnLayout {
+                FluentCard {
+                theme: window.theme
+                cardTitle: "测试卡片"
+                width: 300
+                height: 200
+                x: 100
+                y: 100
                 Label {
+                    text: "卡片内容"
+                    color: window.theme.textColor
                     anchors.centerIn: parent
-                    text: "页面 " + (StackLayout.index + 1)
-                    font.pixelSize: 20
-                    color: theme.textColor
+                    }
+                }
+                FluentButton {
+                    theme: window.theme
+                    text: "测试按钮"
+                    x: 420
+                    y: 100
+                        }
+                FluentInfoBar {
+                    id: testBar
+                    theme: root.theme
+                    Layout.fillWidth: true
+                    Component.onCompleted: {
+                        testBar.show("欢迎使用 MARS AI Agent", "success", 5000)
+                    }
                 }
             }
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "会话"; color: theme.textColor } }
