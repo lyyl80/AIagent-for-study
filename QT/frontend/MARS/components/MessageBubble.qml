@@ -14,6 +14,7 @@ Rectangle {
     property string message: ""                 // 消息文本内容
     property string toolName: ""                // 工具名称（可选，为空时不显示工具卡片）
     property string toolResult: ""              // 工具执行结果（可选）
+    property bool needInput: false              // 是否需要用户输入
 
     width: parent ? parent.width : 0            // 宽度：跟随父容器
     implicitHeight: contentColumn.height + 24   // 高度：根据内容自动计算，上下留白 24px
@@ -98,6 +99,41 @@ Rectangle {
                     wrapMode: Text.Wrap         // 自动换行
                     elide: Text.ElideRight      // 超出省略号
                     maximumLineCount: 3         // 最多显示 3 行
+                }
+            }
+        }
+
+        // ====== 等待用户输入提示 ======
+        Rectangle {
+            id: inputHint
+            anchors.left: parent.left
+            anchors.right: parent.right
+            visible: root.needInput             // 仅在需要输入时显示
+            radius: 6                           // 圆角半径 6px
+            color: theme ? theme.warningBg : "#fff3cd"  // 警告色背景
+            border.color: theme ? theme.dividerColor : "#ffc107"
+            border.width: 1
+            height: visible ? hintInner.height + 16 : 0
+
+            Row {
+                id: hintInner
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 8
+                spacing: 6
+
+                Label {
+                    text: "\u23F3"  // ⏳ 沙漏图标
+                    font.pixelSize: 14
+                    color: theme ? theme.textColor : "#856404"
+                }
+
+                Label {
+                    text: "等待你的回复..."
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: theme ? theme.textColor : "#856404"
                 }
             }
         }

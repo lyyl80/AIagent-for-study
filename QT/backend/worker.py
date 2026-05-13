@@ -50,7 +50,14 @@ class ChatWorker(QThread):
             tool_args = action.get("tool_args", {})
 
             self.stepCompleted.emit(step_num + 1, agent.max_steps)
-            self.textChunk.emit(f"[步骤 {step_num+1}] 调用 {tool_name} → {'成功' if not failed else '失败'}\n")
+
+            if tool_name == "talk":
+                msg = tool_args.get("message", "") or tool_args.get("content", "")
+                if msg:
+                    self.textChunk.emit(msg + "\n")
+            else:
+                self.textChunk.emit(f"[步骤 {step_num+1}] 调用 {tool_name} → {'成功' if not failed else '失败'}\n")
+
             self.toolInvoked.emit(tool_name, str(tool_args),
                                   "执行完成" if not failed else "执行失败")
 
@@ -68,4 +75,4 @@ class ChatWorker(QThread):
 
             if need_user_input:
                 self.textChunk.emit("[等待用户输入...]\n")
-                continue
+                break

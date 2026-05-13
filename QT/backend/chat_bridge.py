@@ -63,12 +63,16 @@ class ChatBridge(QObject):
 
     def _on_worker_finished(self):
         self.isThinking = False
-        self._worker = None
+        if self._worker:
+            self._worker.wait(3000)
+            self._worker = None
 
     def _on_worker_error(self, msg):
         self.errorOccurred.emit(msg)
         self.isThinking = False
-        self._worker = None
+        if self._worker:
+            self._worker.wait(3000)
+            self._worker = None
 
     @Slot()
     def clearHistory(self):
