@@ -41,39 +41,52 @@ Window {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // 占位页面
-            ColumnLayout {
-                FluentCard {
-                theme: window.theme
-                cardTitle: "测试卡片"
-                width: 300
-                height: 200
-                x: 100
-                y: 100
-                Label {
-                    text: "卡片内容"
-                    color: window.theme.textColor
-                    anchors.centerIn: parent
-                    }
-                }
-                FluentButton {
-                    theme: window.theme
-                    text: "测试按钮"
-                    x: 420
-                    y: 100
-                        }
-                FluentInfoBar {
-                    id: testBar
-                    theme: root.theme
-                    Layout.fillWidth: true
-                    Component.onCompleted: {
-                        testBar.show("欢迎使用 MARS AI Agent", "success", 5000)
-                    }
+            // 聊天主界面
+            ChatPage {
+                id: chatPage
+                theme: root.theme
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                onUserMessage: function(text) {
+                    chatBridge.sendMessage(text)
                 }
             }
+           
+            
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "会话"; color: theme.textColor } }
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "工具"; color: theme.textColor } }
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "设置"; color: theme.textColor } }
+             // 连接桥接信号
+           Connections {
+                target: chatBridge
+
+                function onMessageReceived(sender, text) {
+                    chatPage.chatModel = chatPage.chatModel.concat([
+                        { sender: sender, message: text }
+                    ])
+                }
+
+                function onToolCalled(toolName, args, result) {
+                    chatPage.chatModel = chatPage.chatModel.concat([
+                        {
+                            sender: "ai",
+                            message: "\u{1F527} 工具: " + toolName,
+                            toolName: toolName,
+                            toolResult: result
+                        }
+                    ])
+                }
+
+                function onErrorOccurred(message) {
+                    chatPage.chatModel = chatPage.chatModel.concat([
+                        { sender: "ai", message: "\u26A0\uFE0F " + message }
+                    ])
+                }
+
+                function onThinkingChanged(isThinking) {
+                    chatPage.isThinking = isThinking
+                }
+            }
         }
     }
 

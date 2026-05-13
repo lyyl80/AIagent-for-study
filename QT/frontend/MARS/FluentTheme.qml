@@ -34,7 +34,7 @@ QtObject {
     // ====== 消息气泡 ======
     readonly property color userBubbleBg:     accentColor
     readonly property color userBubbleText:   "#ffffff"
-    readonly property color aiBubbleBg:       darkMode ? "#3a3a3a" : "#f0f0f0"
+    readonly property color aiBubbleBg:       darkMode ? "#3a3a3a" : "#ffffff"
     readonly property color aiBubbleText:     darkMode ? "#e0e0e0" : "#2d2d2d"
     readonly property color toolBubbleBg:     darkMode ? "#2d2d2d" : "#fafafa"
     readonly property color toolBubbleBorder: dividerColor

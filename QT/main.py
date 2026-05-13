@@ -10,13 +10,18 @@ if project_root not in sys.path:
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtCore import QUrl
+from backend.chat_bridge import ChatBridge
 
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     app.setApplicationName("MARS AI Agent")
     app.setOrganizationName("MARS")
 
+    #创建桥接对象
+    bridge = ChatBridge()
+
     engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("chatBridge", bridge)
     
     engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
 
