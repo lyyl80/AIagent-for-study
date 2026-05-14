@@ -1,234 +1,125 @@
-# MARS AI Agent - 学习与构建智能代理的实践框架
+# MARS AI Agent
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+模块化 AI 代理系统，支持命令行和 PySide6 QML 桌面客户端。基于思考-执行-反思循环驱动 LLM 自主完成文件操作、代码分析、网络搜索等任务。
 
-> 一个模块化、可扩展的 Python AI 代理系统，专为希望深入理解和实践智能代理（Agent）技术的学习者设计。从零开始，快速构建属于你自己的自动化助手。
+## 功能特性
 
-## ✨ 核心亮点
+- **双端运行**：CLI 交互模式 + QML 桌面 GUI
+- **思考-执行-反思循环**：LLM 自主规划、调用工具、验证结果
+- **工具系统**：文件读写、Shell 命令、网络搜索、内容替换等
+- **会话持久化**：对话历史自动保存，支持加载/删除
+- **流式输出**：桌面端实时显示 LLM 响应
+- **亮暗主题**：按 `T` 切换，支持主题色系统
+- **流式输出**：桌面端实时显示 LLM 响应（实际尚未实现，计划中）
 
-- **🧩 模块化设计**：清晰的代理、工具、记忆分离架构，让你轻松替换或扩展任意组件。
-- **🚀 开箱即用（并非（）**：提供交互对话、会话管理等，满足不同场景需求。
-- **🔧 丰富工具集**：内置文件操作、代码分析等常用工具，并支持快速集成新工具。
+## 技术栈
 
-## 🎯 项目愿景
+- **语言**：Python 3.8+
+- **桌面端**：PySide6 (Qt6 QML)
+- **LLM**：DeepSeek API / OpenAI / Ollama
+- **架构**：QThread 异步工作线程，QObject 桥接 Python↔QML
+- **存储**：JSON 文件持久化
 
-你是否对AI Agent的工作原理感到好奇？是否想亲手搭建一个能理解指令、使用工具、拥有记忆的智能体？
+## 快速开始
 
-**MARS AI Agent** 正是为此而生。它不仅仅是一个工具，更是一个**可运行的学习项目**。通过一个结构清晰、功能完整的实现，帮助你跨越理论与实践的鸿沟，深入掌握智能代理系统的核心概念与构建技巧。
-
-## 🏗️ 项目结构
-
-以下是项目的核心目录与文件概览，反映了清晰的模块划分：
-
-```
-.
-├── main.py              # 主程序入口，命令行界面
-├── README.md            # 项目说明文档
-├── requirements.txt     # Python依赖包列表
-├── .env                # 环境变量配置文件（模板）
-├── .gitignore
-│
-├── agent/              # 代理核心模块（聊天代理、记忆管理）
-├── config/             # 配置文件与设置
-├── llm/                # 大语言模型客户端与接口
-├── prompt/             # 提示词模板管理
-├── tools/              # 工具库（文件操作、代码分析等）
-├── docs/               # 文档目录
-├── session/            # 会话持久化存储（自动生成）
-├── logs/               # 日志文件目录（自动生成）
-├── .venv/              # Python虚拟环境（通常忽略）
-└── ...                 # 其他运行时生成的目录（如__pycache__）
-```
-*注：这是一个模块化的Python AI Agent项目结构。核心模块按功能分离，便于维护和扩展。`session/`和`logs/`目录会在运行时自动生成。`.venv`是隔离的Python环境，建议在开发时使用。*
-
-## 🚀 快速开始（1分钟体验）
-
-想在最短时间内感受AI Agent的魅力吗？跟随以下三步：
-
-1.  **克隆与准备**
-    ```bash
-    # 克隆项目（请将 <your-repo-url> 替换为实际地址）
-    git clone <your-repo-url>
-    cd AIagent
-    # 安装依赖
-    pip install -r requirements.txt
-    ```
-2.  **运行交互模式**
-    ```bash
-    python main.py
-    ```
-    *程序将启动交互式命令行界面，你可以直接与AI代理对话。*
-3.  **执行你的第一个代理任务**
-    在交互模式中，输入你的任务指令，例如：
-    ```
-    请列出当前目录下的所有Python文件
-    ```
-    *预期输出：代理将分析你的指令，调用文件系统工具，并返回找到的 `.py` 文件列表。*
-
-**进阶用法**：你也可以在Python代码中直接使用ChatAgent类：
-```python
-from agent.chat_agent import ChatAgent
-
-# 创建代理实例并执行任务
-agent = ChatAgent(user_input="请分析requirements.txt文件")
-agent.run()
+```bash
+pip install -r requirements.txt
 ```
 
-## 📦 完整安装与配置
-
-### 环境要求
-- Python 3.8+
-- 一个可用的 DeepSeek API 密钥（或其他支持的LLM，如OpenAI或本地Ollama）
-
-### 详细步骤
-1.  **安装依赖**：`pip install -r requirements.txt`
-2.  **配置API密钥**：复制根目录下的 `.env` 文件模板（或创建它），根据你的LLM提供商配置相应参数：
-   - DeepSeek: 设置 `DEEPSEEK_API_KEY` 和 `DEEPSEEK_BASE_URL`
-   - OpenAI: 设置 `OPENAI_API_KEY`（需要相应代码适配）
-   - 本地Ollama: 设置 `LLM_URL`（默认为 `http://localhost:11434`）
-3.  **验证安装**：运行 `python main.py`，如果成功进入交互模式，说明安装配置正确。
-
-## 🧭 使用指南
-
-### 1. 交互式对话模式（默认）
-运行 `python main.py` 直接进入交互式命令行界面，代理会记住对话上下文，实现连贯的协作。
-
-在交互模式下，你可以使用以下内置命令管理会话：
-- `help`: 查看所有可用命令
-- `clear`: 清空当前会话历史
-- `history`: 查看步骤执行历史记录
-- `messages`: 查看对话消息记录
-- `summary`: 显示当前会话的摘要
-- `list`: 列出所有保存的会话
-- `load <文件名>`: 加载指定会话文件
-- `exit` / `quit`: 退出交互模式
-
-### 2. 会话持久化
-对话历史自动保存到 `session/` 目录中，实现有记忆的助手体验。
-
-- **自动保存**: 每次对话结束时，会话会自动保存
-- **加载历史**: 使用 `load <文件名>` 命令加载之前的会话
-- **查看会话列表**: 使用 `list` 命令查看所有保存的会话
-
-### 3. 编程式使用
-在Python代码中直接使用ChatAgent类执行单次任务：
-```python
-from agent.chat_agent import ChatAgent
-
-# 创建代理实例并执行任务
-agent = ChatAgent(user_input="请分析requirements.txt文件")
-agent.run()
-
-# 启用调试输出
-agent = ChatAgent(user_input="你的任务", debug=True)
-agent.run()
+**命令行模式**：
+```bash
+python main.py
 ```
 
-### 4. 探索与调试
-- **查看可用工具**: 在交互模式下，代理会自动选择合适工具，你也可以查看 `tools/tools.py` 了解所有可用工具
-- **调试模式**: 创建ChatAgent实例时设置 `debug=True` 可查看详细执行过程
-- **日志文件**: 运行日志保存在 `logs/` 目录中
+**桌面客户端**：
+```bash
+python QT/main.py
+```
+按 `T` 切换亮/暗主题。
 
-## 🛠️ 系统架构概述
+## 项目结构
 
-```mermaid
-graph TD
-    A[用户输入/任务] --> B(主代理引擎)
-    B --> C{解析、规划与决策}
-    C --> D[调用特定工具]
-    D --> E[执行工具并获取结果]
-    E --> F[整合结果并生成回复]
-    F --> G[输出自然语言响应]
-    B <--> H[记忆系统]
-    D <--> I[工具库]
-    C <--> J[大语言模型 LLM]
+```
+main.py               CLI 入口，交互式对话
+QT/
+ ├── main.py          桌面客户端入口，启动 QML 引擎
+ ├── backend/
+ │   ├── chat_bridge.py   Python↔QML 桥接（QObject）
+ │   └── worker.py        LLM 工作线程（QThread）
+ └── frontend/MARS/       QML 前端
+     ├── main.qml         窗口 + 导航布局
+     ├── FluentTheme.qml  亮暗主题色
+     ├── components/      UI 组件（气泡、输入栏、导航等）
+     └── pages/           页面（聊天、工具、设置）
+core/
+ ├── agent/
+ │   ├── chat_agent.py    思考-执行-反思主循环
+ │   └── memory.py        会话持久化（JSON）
+ ├── llm/client.py        LLM 模型管理
+ ├── prompt/templates.py  提示词模板（精简版）
+ ├── tools/               工具注册表 + 实现
+ └── config/settings.py   配置项
 ```
 
-- **主代理引擎**：系统的协调中心，管理整个任务执行流程。
-- **记忆系统**：负责存储和检索对话历史与知识，实现上下文感知和持续性。
-- **工具库**：代理的“技能包”，每个工具都是一个可独立执行特定功能（如文件操作、网络请求）的模块。
-- **大语言模型（LLM）**：提供核心的自然语言理解、推理和生成能力。
+## 架构
 
-## 🔌 扩展指南：添加一个新工具
-
-想要让你的代理学会一项新技能？只需简单三步：
-
-1.  **创建工具函数**
-    在 `tools/tools.py` 文件中添加新的工具函数，例如：
-    ```python
-    def get_weather_tool(**kwargs):
-        """
-        获取城市天气信息
-        :param city: 城市名称
-        :return: 天气信息字符串
-        """
-        city = kwargs.get("city")
-        if not city:
-            return "Error: Missing city parameter"
-        
-        # 在这里实现天气API调用
-        # ...
-        return f"{city}的天气是晴，25℃。"
-    ```
-
-2.  **注册工具到注册表**
-    在 `tools/__init__.py` 文件的 `TOOL_REGISTRY` 字典中添加新工具：
-    ```python
-    "get_weather": (
-        get_weather_tool,
-        "获取城市天气信息。参数: city - 城市名称",
-        {
-            "required_params": ["city"],
-            "optional_params": []
-        }
-    )
-    ```
-
-3.  **重启代理**
-    新工具 `get_weather` 将自动出现在可用工具列表中，代理可以理解并调用它。
-
-**注意事项**：
-- 工具函数应使用 `**kwargs` 接收参数
-- 提供清晰的函数文档字符串，描述参数和返回值
-- 在 `TOOL_REGISTRY` 中提供准确的描述和参数模式
-
-## ❓ 常见问题（FAQ）
-
-**Q: 运行时报错 `ModuleNotFoundError: No module named 'xxx'`**  
-A: 请确保已安装所有依赖：`pip install -r requirements.txt`。如果问题依旧，请检查Python版本（要求3.8+）和虚拟环境是否激活。
-
-**Q: 代理似乎没有正确理解我的指令或调用了错误的工具**  
-A: 在config文件夹setting中令 `debugmode=True` 可查看详细执行过程，帮助诊断问题。同时检查工具的描述是否清晰准确，这直接影响LLM对工具的选择。
-
-**Q: 如何更换为其他LLM提供商或本地模型？**  
-A: 本项目支持DeepSeek、OpenAI和本地Ollama模型。修改 `.env` 文件中的 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL` 或 `LLM_URL` 配置。详细配置请参考 `config/settings.py` 和 `llm/client.py` 中的代码,在client.py中添加新的模型,在settings.py中写入新的模型对应的名字
-
-**Q: `.env` 文件应该怎么设置？**  
-A: 在项目根目录下创建或编辑 `.env` 文件，根据需要配置以下参数：
 ```
-DEEPSEEK_API_KEY=your-deepseek-api-key
+CLI:  用户输入 → ChatAgent.step() 循环 → Memory 持久化
+GUI:  用户输入 → ChatBridge → ChatWorker(QThread) → ChatAgent.step()
+         ↓                                       ↓
+      QML 界面 ← 信号(textChunk/toolInvoked) ←──┘
+```
+
+**CLI 模式**：直接实例化 `ChatAgent`，`run()` 方法驱动循环。
+
+**GUI 模式**：
+1. `ChatBridge(QObject)` 暴露给 QML 上下文，接收用户输入
+2. `ChatWorker(QThread)` 在后台运行 `ChatAgent.step()` 循环
+3. 通过 Qt 信号（`textChunk`、`toolInvoked`）将结果推送到 QML
+4. `Memory` 存储全部对话历史，支持跨会话加载
+
+**记忆系统**：`Memory` 每步自动保存，`session_id` 区分会话。`get_history(n)` 返回最近 n 条记录供 LLM 上下文参考。
+
+## 配置
+
+创建 `.env` 文件：
+```
 DEEPSEEK_BASE_URL=https://api.deepseek.ai
-LLM_URL=http://localhost:11434  # 本地Ollama服务地址
+LLM_URL=http://localhost:11434
 ```
-请确保该文件已被 `.gitignore` 保护，不要提交到版本库。
 
-## 🤝 贡献
+`DEEP_SEEK_API_KEY` 需设为系统环境变量（因 `.env` 首行 `import os` 与 `python-dotenv` 冲突）。
 
-我们非常欢迎并感谢任何形式的贡献！无论是报告Bug、提出新功能建议、改进文档，还是直接贡献代码。
+修改 `core/config/settings.py` 可调整默认模型和调试模式。
 
-1.  Fork 本仓库
-2.  创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3.  提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
-4.  推送到分支 (`git push origin feature/AmazingFeature`)
-5.  开启一个 Pull Request
+## 使用
 
-## 📄 许可证
+**CLI 命令**：
+- `help` — 帮助
+- `clear` — 清空历史
+- `history` — 查看步骤记录
+- `list` — 列出会话
+- `load <文件名>` — 加载会话
 
-本项目基于 **MIT 许可证** 开源。这意味着你可以自由地使用、复制、修改、合并、发布、分发和再授权本软件的副本。
+**GUI 操作**：
+- 输入框发送消息，Enter 发送，Shift+Enter 换行
+- 左侧导航栏切换页面
+- 底部主题按钮 / `T` 键切换暗色模式
+- 🗑 清空当前对话
 
-详见项目根目录下的 [LICENSE](LICENSE) 文件（如果存在）。
+## 后续路线图
 
----
+- [x] 基础聊天界面 + LLM 流式输出
+- [x] 亮暗主题切换
+- [x] 工具调用显示
+- [ ] 会话侧边栏（ChatPage 内嵌，可折叠）
+- [ ] 工具面板页（展示工具列表/详情）
+- [ ] 设置页（模型选择、API Key、Debug 开关）
+- [ ] 可折叠思考框（显示 LLM 推理过程）
+- [ ] 消息流式逐 token 显示
+- [ ] 会话加载后恢复消息列表
+- [ ] 工具结果真实内容显示（非"执行完成"）
 
-**让学习发生，让创造开始。**  
-希望 **MARS AI Agent** 能成为你探索人工智能世界的得力伙伴与起点！
+## 许可证
+
+MIT
