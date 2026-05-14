@@ -1,13 +1,12 @@
 from typing import Dict, Any, Optional, Tuple
 from core.llm.client import ModelManager
 from core.agent.memory import Memory
-from core.prompt.templates import *
+from core.prompt.templates import SYSTEM_PROMPT, THINK_PROMPT, ACTION_SCHEMA, REFLECT_PROMPT
 from core.tools import call_tool, get_tool_description, TOOL_REGISTRY
-from core.config import *
 import sys
 import time
 import threading
-from core.config.settings import *
+from core.config.settings import Debugmode, MODEL_ING
 
 model_manager = ModelManager()
 
@@ -215,8 +214,10 @@ class ChatAgent:
             return (error_msg, tool, False, True)
         
         # 标准化错误检测
-        
-        
+        if isinstance(result, str) and result.startswith("Error:"):
+            failed = True
+            print(f"错误: {result}")
+
         # 处理工具结果
         if tool == "talk":
             message = tool_args.get("message") or tool_args.get("content") or ""
@@ -361,9 +362,6 @@ class ChatAgent:
                         "output": user_input,
                         "reflect": "用户输入回应"
                     })
-                    
-                    # 更新当前用户输入，以便下一次思考可以参考
-                    self.user_input = user_input
                     
                     # 跳过本次循环的其余部分，继续下一步
                     continue

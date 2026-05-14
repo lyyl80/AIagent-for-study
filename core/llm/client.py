@@ -7,8 +7,8 @@ class ModelManager:
     def __init__(self):
         self.available_models = {
             "云端模型": {
-                "deepseek-chat": {"name": "DeepSeek Chat", "type": "cloud"},
-                "deepseek-reasoner": {"name": "DeepSeek Reasoner", "type": "cloud"},
+                "deepseek-v4-flash": {"name": "DeepSeek Flash", "type": "cloud"},
+                "deepseek-v4-pro": {"name": "DeepSeek Pro", "type": "cloud"},
             },
             "本地模型": {
                 "gemma3:12b": {"name": "gemma3:12b", "type": "local"},

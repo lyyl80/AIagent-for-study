@@ -7,16 +7,7 @@ from core.agent.memory import Memory
 from datetime import datetime
 
 
-def list_tools():
-    """列出所有可用工具"""
-    from core.tools import list_tools, get_tool_description
-    print("=== 可用工具 ===")
-    tools = list_tools()
-    for tool in tools:
-        print(f"  * {tool}")
-    print("\n=== 工具描述 ===")
-    print(get_tool_description())
-def run_interactive_mode( verbose: bool = False):
+def run_interactive_mode(verbose: bool = False):
     """运行交互模式
     
     参数:
@@ -115,16 +106,8 @@ def run_interactive_mode( verbose: bool = False):
                     # 添加用户消息到记忆
                     agent.history.add_message("user", user_input)
                     
-                    # 执行任务
+                    # 执行任务（内部已通过 step() 记录每一步到历史）
                     agent.run()
-                    
-                    # 将代理的历史记录合并到当前记忆
-                    # 注意：ChatAgent有自己的Memory实例，这里只添加步骤历史记录
-                    agent.history.add_conversation({
-                        "input": {"tool": "user", "tool_args": {"message": user_input}},
-                        "output": "任务执行完成",
-                        "reflect": "用户任务"
-                    })
                 
         except KeyboardInterrupt:
             print("\n输入 'exit' 退出程序")
