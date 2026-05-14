@@ -16,23 +16,23 @@ Rectangle {
     property string toolResult: ""              // 工具执行结果（可选）
     property bool needInput: false              // 是否需要用户输入
 
-    width: parent ? parent.width : 0            // 宽度：跟随父容器
-    implicitHeight: contentColumn.height + 24   // 高度：根据内容自动计算，上下留白 24px
-    color: "transparent"                        // 背景透明
+    width: parent ? parent.width : 0
+    implicitHeight: contentColumn.height + 8
+    color: "transparent"
 
-    // ====== 内容列容器 ======
     Column {
         id: contentColumn
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.margins: 16                     // 左右边距 16px
-        y: 12                                   // 垂直偏移 12px
-        spacing: 4                              // 子元素间距 4px
+        anchors.margins: 8
+        y: 4
+        spacing: 2
 
         // ====== 消息气泡 ======
         Rectangle {
             id: bubble
-            
+            visible: root.toolName === "" || root.message !== ""
+
             // 动态对齐：用户消息右对齐，AI 消息左对齐
             anchors.left: sender === "ai" ? parent.left : undefined
             anchors.right: sender === "user" ? parent.right : undefined
@@ -80,13 +80,12 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 10             // 内边距 10px
-                spacing: 4                      // 子元素间距 4px
+                anchors.margins: 6
+                spacing: 2
 
-                // 工具名称（带扳手图标）
                 Label {
-                    text: "\u{1F527} " + root.toolName  // 🔧 工具名
-                    font.pixelSize: 12          // 字体大小 12px
+                    text: "\u{1F527} " + root.toolName
+                    font.pixelSize: 12
                     font.bold: true             // 粗体显示
                     color: theme ? theme.textColor : "#333"
                 }
