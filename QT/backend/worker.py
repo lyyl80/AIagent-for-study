@@ -50,12 +50,13 @@ class ChatWorker(QThread):
 
             self.stepCompleted.emit(step_num + 1, agent.max_steps)
 
-            if tool_name == "talk" :
-                msg = tool_args.get("message", "") or tool_args.get("content", "") 
+            if tool_name == "talk":
+                msg = tool_args.get("message", "") or tool_args.get("content", "")
                 if msg:
                     self.textChunk.emit(msg + "\n")
-            self.toolInvoked.emit(tool_name, str(tool_args),
-                                  "执行完成" if not failed else "执行失败")
+            else:
+                self.toolInvoked.emit(tool_name, str(tool_args),
+                                      "执行完成" if not failed else "执行失败")
 
             if failed:
                 consecutive_failures += 1

@@ -172,7 +172,7 @@ class ChatAgent:
         """
         messages = REFLECT_PROMPT.format(
             result=result,
-            history=self.history.get_history(),
+            history=self.history.get_history(3),
             tool_name=tool_name,
             tool_args=tool_args
         )
