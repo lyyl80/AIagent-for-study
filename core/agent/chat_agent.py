@@ -47,7 +47,7 @@ class ChatAgent:
     支持工具调用、历史记忆和用户交互。
     """
     
-    def __init__(self, user_input: Optional[str] = None):
+    def __init__(self, user_input: Optional[str] = None, memory: Optional[Memory] = None):
         
         self.llm_json = model_manager.llm_json
         model_info = model_manager.get_model_by_key(MODEL_ING)
@@ -56,7 +56,7 @@ class ChatAgent:
             [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
             system_prompt
         )
-        self.history = Memory(user_input=user_input)
+        self.history = memory or Memory(user_input=user_input)
         self.user_input = user_input
         self.tools = TOOL_REGISTRY
         self.max_steps = 100

@@ -26,8 +26,7 @@ class ChatWorker(QThread):
         try:
             
 
-            agent = ChatAgent(user_input=self.user_input)
-            agent.history = self.memory
+            agent = ChatAgent(user_input=self.user_input, memory=self.memory)
             self._run_agent(agent)
 
         except Exception as e:

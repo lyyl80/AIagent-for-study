@@ -42,6 +42,7 @@ class ChatBridge(QObject):
             return
 
         self.isThinking = True
+        self._current_memory.add_message("user", text)
         self.messageReceived.emit("user", text)
 
         self._worker = ChatWorker(text, memory=self._current_memory)
