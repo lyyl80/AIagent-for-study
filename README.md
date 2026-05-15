@@ -82,13 +82,7 @@ GUI:  用户输入 → ChatBridge → ChatWorker(QThread) → ChatAgent.step()
 
 ## 配置
 
-创建 `.env` 文件：
-```
-DEEPSEEK_BASE_URL=https://api.deepseek.ai
-LLM_URL=http://localhost:11434
-```
-
-`DEEP_SEEK_API_KEY` 需设为系统环境变量（因 `.env` 首行 `import os` 与 `python-dotenv` 冲突）。
+`DEEP_SEEK_API_KEY` 需设为系统环境变量
 
 修改 `core/config/settings.py` 可调整默认模型和调试模式。
 
