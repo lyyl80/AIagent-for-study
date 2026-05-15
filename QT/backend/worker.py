@@ -44,6 +44,7 @@ class ChatWorker(QThread):
 
             recent = agent.history.get_history(1)
             failed = recent and recent[0].get("failed", False) if recent else False
+            actual_result = recent[0].get("output", "") if recent else ""
 
             tool_name = action.get("tool", "")
             tool_args = action.get("tool_args", {})
@@ -56,7 +57,7 @@ class ChatWorker(QThread):
                     self.textChunk.emit(msg + "\n")
             else:
                 self.toolInvoked.emit(tool_name, str(tool_args),
-                                      "执行完成" if not failed else "执行失败")
+                                      actual_result if not failed else f"执行失败: {actual_result}")
 
             if failed:
                 consecutive_failures += 1

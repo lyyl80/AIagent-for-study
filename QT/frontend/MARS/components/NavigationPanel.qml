@@ -18,7 +18,6 @@ Item {
     // ========= 导航项数据模型 =========
     readonly property var navItems: [
         { icon: "\u{1F3E0}", label: "对话" },  // 🏠 首页/对话
-        { icon: "\u{1F4C2}", label: "会话" },  // 📂 会话管理
         { icon: "\u{1F527}", label: "工具" },  // 🔧 工具配置
         { icon: "\u{2699}", label: "设置" }    // ⚙ 系统设置
     ]

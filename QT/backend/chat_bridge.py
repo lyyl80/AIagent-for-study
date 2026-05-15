@@ -16,6 +16,7 @@ class ChatBridge(QObject):
     thinkingChanged = Signal(bool)
     errorOccurred = Signal(str)
     sessionListUpdated = Signal(list)
+    sessionLoaded = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -83,6 +84,7 @@ class ChatBridge(QObject):
     def loadSession(self, filename):
         try:
             self._current_memory = Memory.load_session(filename)
+            self.sessionLoaded.emit(filename)
         except Exception as e:
             self.errorOccurred.emit(f"加载会话失败: {e}")
 

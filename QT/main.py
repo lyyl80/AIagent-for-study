@@ -11,16 +11,22 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtCore import QUrl
 from backend.chat_bridge import ChatBridge
+from backend.session_model import SessionListModel
 
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     app.setApplicationName("MARS AI Agent")
     app.setOrganizationName("MARS")
 
-    #创建桥接对象
+    # 创建引擎对象
+    engine = QQmlApplicationEngine()
+    
+    # 创建桥接对象
     bridge = ChatBridge()
 
-    engine = QQmlApplicationEngine()
+    session_model = SessionListModel()
+    engine.rootContext().setContextProperty("sessionModel", session_model)
+
     engine.rootContext().setContextProperty("chatBridge", bridge)
     
     engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
