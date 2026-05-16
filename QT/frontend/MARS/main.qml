@@ -66,7 +66,12 @@ Window {
                 }
             }
 
-            Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "工具"; color: theme.textColor } }
+            ToolsPage {
+                id: toolsPage
+                theme: root.theme
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "设置"; color: theme.textColor } }
              // 连接桥接信号
            Connections {

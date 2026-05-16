@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Slot, Signal, Property
 from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
+from core.tools import TOOL_REGISTRY
 
 
 class ChatBridge(QObject):
@@ -129,6 +130,21 @@ class ChatBridge(QObject):
     @Slot(result=list)
     def getToolNames(self):
         return list_tools()
+
+    @Slot(result=list)
+    def getTools(self):
+        result = []
+        for name, (func, desc, schema) in TOOL_REGISTRY.items():
+            if name in ("talk", "finish"):
+                continue
+            entry = {
+                "name": name,
+                "description": desc.strip(),
+                "required_params": ", ".join(schema.get("required_params", [])) if schema else "",
+                "optional_params": ", ".join(schema.get("optional_params", [])) if schema else ""
+            }
+            result.append(entry)
+        return result
 
     @Slot(str, str, result=str)
     def callToolDirectly(self, tool_name, args_json):
