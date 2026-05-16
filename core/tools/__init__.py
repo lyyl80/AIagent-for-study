@@ -66,10 +66,10 @@ TOOL_REGISTRY: Dict[str, ToolEntry] = {
     ),
     "finish": (
         finish_tool,
-        "结束任务。可选参数: response - 结语消息",
+        "结束任务。",
         {
             "required_params": [],
-            "optional_params": ["response"]
+            "optional_params": []
         }
     ),
     "weather": (

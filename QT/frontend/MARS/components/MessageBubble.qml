@@ -62,42 +62,85 @@ Rectangle {
             }
         }
 
-        // ====== 工具调用卡片（仅在有工具名时显示）======
+        // ====== 可折叠半透明工具面板 ======
         Rectangle {
             id: toolCard
             anchors.left: parent.left
             anchors.right: parent.right
-            visible: root.toolName !== ""       // 仅在工具名非空时显示
-            radius: 8                           // 圆角半径 8px
-            color: theme ? theme.toolBubbleBg : "#fafafa"           // 背景色：浅灰
-            border.color: theme ? theme.toolBubbleBorder : "#ddd"   // 边框颜色
-            border.width: 1                     // 边框宽度 1px
-            height: visible ? toolInner.height + 20 : 0  // 动态高度
+            visible: root.toolName !== ""
+            radius: 8
+            color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.05) : Qt.rgba(0,0,0,0.03)
+            border.color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.1) : Qt.rgba(0,0,0,0.06)
+            border.width: 1
+            height: visible ? toolInner.height + 10 : 0
 
-            // 工具信息列
+            property bool toolExpanded: false
+
             Column {
                 id: toolInner
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 6
-                spacing: 2
+                anchors.margins: 5
+                spacing: 0
 
-                Label {
-                    text: "\u{1F527} " + root.toolName
-                    font.pixelSize: 12
-                    font.bold: true             // 粗体显示
-                    color: theme ? theme.textColor : "#333"
+                MouseArea {
+                    height: 26
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: toolCard.toolExpanded = !toolCard.toolExpanded
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 6
+
+                        Label {
+                            text: toolCard.toolExpanded ? "\u25BC" : "\u25B6"
+                            font.pixelSize: 9
+                            color: theme ? theme.secondaryText : "#999"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Label {
+                            text: "\u2699 " + root.toolName
+                            font.pixelSize: 12
+                            font.bold: false
+                            color: theme ? theme.textColor : "#444"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Label {
+                            text: " · " + (root.toolResult || "").replace(/\n/g, ' ').substring(0, 40)
+                            font.pixelSize: 11
+                            color: theme ? theme.secondaryText : "#999"
+                            elide: Text.ElideRight
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: !toolCard.toolExpanded
+                        }
+                    }
                 }
-                
-                // 工具执行结果
-                Label {
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.06) : Qt.rgba(0,0,0,0.04)
+                    visible: toolCard.toolExpanded
+                }
+
+                Text {
                     text: root.toolResult
-                    font.pixelSize: 11          // 字体大小 11px
-                    color: theme ? theme.secondaryText : "#666"  // 次要文字颜色
-                    wrapMode: Text.Wrap         // 自动换行
-                    elide: Text.ElideRight      // 超出省略号
-                    maximumLineCount: 3         // 最多显示 3 行
+                    font.pixelSize: 12
+                    font.family: "Courier New, Consolas, monospace"
+                    color: theme ? theme.secondaryText : "#666"
+                    wrapMode: Text.Wrap
+                    visible: toolCard.toolExpanded
+                    leftPadding: 18
+                    topPadding: 6
+                    bottomPadding: 4
+                    rightPadding: 4
                 }
             }
         }
