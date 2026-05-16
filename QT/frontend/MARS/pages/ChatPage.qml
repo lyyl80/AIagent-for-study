@@ -146,73 +146,68 @@ Rectangle {
                         visible: sessionListView.count === 0
                     }
 
-                    // 列表项委托：自定义每个会话项的渲染
-                    delegate: Rectangle {
+                    delegate: Item {
                         width: sessionListView.width - 16
-                        height: 56
-                        radius: 6
-                        // 悬停时显示高亮背景
-                        color: mouseArea.containsMouse
-                               ? (theme ? theme.navHoverBg : "#eee")
-                               : Qt.rgba(0, 0, 0, 0.03)
+                        height: 52
 
-                        // 会话信息列：文件名和创建时间
-                        Column {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            // 会话文件名（最多显示一行，超出部分省略）
-                            Label {
-                                text: modelData.filename || "(无标题)"
-                                font.pixelSize: 13
-                                color: theme ? theme.textColor : "#333"
-                                elide: Text.ElideRight
-                                width: parent.parent.width - 60
-                            }
-                            
-                            // 创建时间（截取前16个字符，格式如 "2024-01-01 12:00"）
-                            Label {
-                                text: (modelData.created_time || "").substring(0, 16)
-                                font.pixelSize: 10
-                                color: theme ? theme.secondaryText : "#999"
-                            }
-                        }
-
-                        // 鼠标区域：处理悬停效果和点击事件
                         MouseArea {
-                            id: mouseArea
+                            id: hoverArea
                             anchors.fill: parent
-                            hoverEnabled: true  // 启用悬停检测
-                            cursorShape: Qt.PointingHandCursor  // 手型光标
-                            onClicked: root.loadSession(modelData.filename)  // 点击加载会话
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.loadSession(modelData.filename)
                         }
 
-                        // 删除按钮：仅在悬停时显示
-                        Button {
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 6
+                            color: hoverArea.containsMouse
+                                   ? (theme ? theme.navHoverBg : "#eee")
+                                   : "transparent"
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
                             anchors.rightMargin: 4
-                            width: 28   // 固定宽度
-                            height: 28  // 固定高度
-                            text: "\u{2716}"  // ✖ 关闭图标
-                            flat: true
-                            visible: mouseArea.containsMouse  // 悬停时可见
-                            onClicked: root.deleteSession(modelData.filename)  // 点击删除会话
-                            
-                            // 按钮背景：悬停时显示红色半透明
-                            background: Rectangle {
-                                radius: 4
-                                color: parent.hovered ? "#ff444422" : "transparent"
+                            spacing: 8
+
+                            Column {
+                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignVCenter
+                                spacing: 2
+
+                                Label {
+                                    text: modelData.filename || "(无标题)"
+                                    font.pixelSize: 13
+                                    color: theme ? theme.textColor : "#333"
+                                    elide: Text.ElideRight
+                                }
+
+                                Label {
+                                    text: (modelData.created_time || "").substring(0, 16)
+                                    font.pixelSize: 10
+                                    color: theme ? theme.secondaryText : "#999"
+                                }
                             }
-                            
-                            // 按钮内容：红色关闭图标
-                            contentItem: Label {
-                                anchors.centerIn: parent
-                                text: parent.text
-                                font.pixelSize: 14
-                                color: "#ff4444"
+
+                            Button {
+                                Layout.alignment: Qt.AlignVCenter
+                                width: 28
+                                height: 28
+                                text: "\u{2716}"
+                                flat: true
+                                onClicked: root.deleteSession(modelData.filename)
+                                background: Rectangle {
+                                    radius: 4
+                                    color: parent.hovered ? "#ff444422" : "transparent"
+                                }
+                                contentItem: Label {
+                                    anchors.centerIn: parent
+                                    text: parent.text
+                                    font.pixelSize: 12
+                                    color: "#ff4444"
+                                }
                             }
                         }
                     }
