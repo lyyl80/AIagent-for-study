@@ -72,7 +72,12 @@ Window {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
             }
-            Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "设置"; color: theme.textColor } }
+            SettingsPage {
+                id: settingsPage
+                theme: root.theme
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
              // 连接桥接信号
            Connections {
                 target: chatBridge
