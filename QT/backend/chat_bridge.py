@@ -79,6 +79,8 @@ class ChatBridge(QObject):
     @Slot()
     def newSession(self):
         self._current_memory = Memory()
+        self._current_memory.save()
+        
 
     @Slot()
     def clearHistory(self):

@@ -51,8 +51,8 @@ class ChatWorker(QThread):
 
             self.stepCompleted.emit(step_num + 1, agent.max_steps)
 
-            if tool_name == "talk":
-                msg = tool_args.get("message", "") or tool_args.get("content", "")
+            if tool_name in ("talk", "finish"):
+                msg = tool_args.get("message", "") or tool_args.get("content", "") or tool_args.get("response", "")
                 if msg:
                     self.textChunk.emit(msg + "\n")
             else:

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import MARS 1.0
 
+
 Window {
     id: root
     width:960
@@ -46,9 +47,23 @@ Window {
                 theme: root.theme
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                onUserMessage: function(text) { chatBridge.sendMessage(text) }
-                onLoadSession: function(f) { chatBridge.loadSession(f) }
-                onNewSession: { chatBridge.newSession(); chatPage.chatModel = []; chatBridge.refreshSessions() }
+                
+                onUserMessage: function(text) {
+                    chatBridge.sendMessage(text)
+                }
+                
+                onLoadSession: function(filename) {
+                    chatBridge.loadSession(filename)
+                }
+                
+                onNewSession: function() {
+                    chatBridge.newSession()
+                    chatPage.chatModel = []
+                    chatBridge.refreshSessions()
+                }
+                onDeleteSession: function(filename) {
+                    chatBridge.deleteSession(filename)
+                }
             }
 
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "工具"; color: theme.textColor } }
