@@ -62,61 +62,78 @@ Rectangle {
                 theme: root.theme
                 cardTitle: modelData.name
 
-                Column {
+                Flickable {
                     anchors.fill: parent
                     anchors.margins: 14
                     anchors.topMargin: 0
-                    spacing: 6
+                    contentHeight: contentColumn.height
+                    clip: true
+                    interactive: true
 
-                    Label {
-                        width: parent.width
-                        text: modelData.description
-                        font.pixelSize: 12
-                        color: theme ? theme.secondaryText : "#666"
-                        wrapMode: Text.Wrap
-                        lineHeight: 1.4
-                        maximumLineCount: 3
-                        elide: Text.ElideRight
-                    }
-
-                    Item { height: 4; width: 1 }
-
-                    Row {
-                        spacing: 6
-                        visible: modelData.required_params !== ""
-
-                        Rectangle {
-                            height: requiredLabel.implicitHeight + 6
-                            width: requiredLabel.implicitWidth + 12
-                            radius: 4
-                            color: Qt.rgba(0.8, 0.2, 0.2, 0.12)
-
-                            Label {
-                                id: requiredLabel
-                                anchors.centerIn: parent
-                                text: modelData.required_params
-                                font.pixelSize: 11
-                                color: "#cc3333"
-                            }
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                        width: 4
+                        contentItem: Rectangle {
+                            radius: 2
+                            color: theme ? theme.dividerColor : "#ccc"
                         }
                     }
 
-                    Row {
+                    Column {
+                        id: contentColumn
+                        width: parent.width
                         spacing: 6
-                        visible: modelData.optional_params !== ""
 
-                        Rectangle {
-                            height: optionalLabel.implicitHeight + 6
-                            width: optionalLabel.implicitWidth + 12
-                            radius: 4
-                            color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.06) : Qt.rgba(0,0,0,0.04)
+                        Label {
+                            width: parent.width
+                            text: modelData.description
+                            font.pixelSize: 12
+                            color: theme ? theme.secondaryText : "#666"
+                            wrapMode: Text.Wrap
+                            lineHeight: 1.4
+                            maximumLineCount: 3
+                            elide: Text.ElideRight
+                        }
 
-                            Label {
-                                id: optionalLabel
-                                anchors.centerIn: parent
-                                text: modelData.optional_params
-                                font.pixelSize: 11
-                                color: theme ? theme.secondaryText : "#888"
+                        Item { height: 4; width: 1 }
+
+                        Row {
+                            spacing: 6
+                            visible: modelData.required_params !== ""
+
+                            Rectangle {
+                                height: requiredLabel.implicitHeight + 6
+                                width: requiredLabel.implicitWidth + 12
+                                radius: 4
+                                color: Qt.rgba(0.8, 0.2, 0.2, 0.12)
+
+                                Label {
+                                    id: requiredLabel
+                                    anchors.centerIn: parent
+                                    text: modelData.required_params
+                                    font.pixelSize: 11
+                                    color: "#cc3333"
+                                }
+                            }
+                        }
+
+                        Row {
+                            spacing: 6
+                            visible: modelData.optional_params !== ""
+
+                            Rectangle {
+                                height: optionalLabel.implicitHeight + 6
+                                width: optionalLabel.implicitWidth + 12
+                                radius: 4
+                                color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.06) : Qt.rgba(0,0,0,0.04)
+
+                                Label {
+                                    id: optionalLabel
+                                    anchors.centerIn: parent
+                                    text: modelData.optional_params
+                                    font.pixelSize: 11
+                                    color: theme ? theme.secondaryText : "#888"
+                                }
                             }
                         }
                     }
