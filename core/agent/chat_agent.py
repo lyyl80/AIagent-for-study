@@ -61,19 +61,43 @@ class ChatAgent:
         self.max_steps = 100
         self.debug = Debugmode # 调试模式
         
+    def _format_history(self, max_chars: int = 6000) -> str:
+        """格式化历史：保留全部用户消息 + 尽量多的最近工具步骤"""
+        entries = self.history.get_history(200)
+        user_msgs = []
+        tool_steps = []
+
+        for e in entries:
+            if "role" in e and e.get("role") == "user":
+                user_msgs.append(f"用户: {e.get('content', '')}")
+            elif "input" in e:
+                tool = e["input"].get("tool", "")
+                args = e["input"].get("tool_args", {})
+                out = e.get("output", "")
+                failed = e.get("failed", False)
+                if tool in ("talk", "finish"):
+                    tool_steps.append(f"AI: {out}")
+                else:
+                    tool_steps.append(f"工具[{tool}] {args}")
+                    tool_steps.append(f"  → {'失败: ' if failed else ''}{str(out)[:200]}")
+
+        base = "\n".join(user_msgs)
+        keep = []
+        for step in reversed(tool_steps):
+            test = "\n".join([base] + keep + [step])
+            if len(test) > max_chars:
+                break
+            keep.append(step)
+
+        keep.reverse()
+        return "\n".join([base] + keep) if keep else base
+
     def build_prompt(self) -> str:
-        """构建思考提示词
-        
-        返回:
-            str: 格式化后的提示词
-        """
         tools_desc = get_tool_description()
         action_schema = ACTION_SCHEMA.format(tools=tools_desc)
-        # 只使用最近5步历史记录，避免提示词过长
-        recent_history = self.history.get_history(5)
         return THINK_PROMPT.format(
             task=self.user_input,
-            history=recent_history,
+            history=self._format_history(),
             tools=tools_desc,
             action_schema=action_schema
         )
@@ -161,18 +185,9 @@ class ChatAgent:
         return result
     
     def reflect(self, result: Any, tool_name: str, tool_args: Dict[str, Any]) -> str:
-        """反思步骤：分析工具执行结果
-        
-        参数:
-            result: 工具执行结果
-            tool_name: 工具名称
-            tool_args: 工具参数
-        返回:
-            str: 反思内容
-        """
         messages = REFLECT_PROMPT.format(
             result=result,
-            history=self.history.get_history(3),
+            history=self._format_history(3000),
             tool_name=tool_name,
             tool_args=tool_args
         )

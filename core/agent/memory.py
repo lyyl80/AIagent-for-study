@@ -52,9 +52,8 @@ def create_session_filename(session_id: str, messages: List[Dict[str, Any]]) -> 
         str: 完整的文件名（不含扩展名）
     """
     summary = generate_session_summary(messages)
-    # 确保文件名安全，移除可能引起问题的字符
     safe_summary = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', summary)
-    return f"{session_id}_{safe_summary}"
+    return f"{session_id}_{safe_summary}" if safe_summary else session_id
 
 
 class Memory:
