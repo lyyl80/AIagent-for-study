@@ -41,19 +41,16 @@ Window {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // 聊天主界面
             ChatPage {
                 id: chatPage
                 theme: root.theme
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                onUserMessage: function(text) {
-                    chatBridge.sendMessage(text)
-                }
+                onUserMessage: function(text) { chatBridge.sendMessage(text) }
+                onLoadSession: function(f) { chatBridge.loadSession(f) }
+                onNewSession: { chatBridge.newSession(); chatPage.chatModel = []; chatBridge.refreshSessions() }
             }
-           
-            
-            Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "会话"; color: theme.textColor } }
+
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "工具"; color: theme.textColor } }
             Rectangle { color: theme.bgColor; Label { anchors.centerIn: parent; text: "设置"; color: theme.textColor } }
              // 连接桥接信号
@@ -87,19 +84,6 @@ Window {
                 }
 
                 function onToolCalled(toolName, args, result) {
-                    // 工具调用信息附加到最后一条 AI 消息上
-                    if (chatPage.chatModel.length > 0) {
-                        var lastMsg = chatPage.chatModel[chatPage.chatModel.length - 1]
-                        if (lastMsg.sender === "ai") {
-                            // 更新最后一条消息,添加工具信息
-                            lastMsg.toolName = toolName
-                            lastMsg.toolResult = result
-                            chatPage.chatModel = chatPage.chatModel.slice() // 触发更新
-                            return
-                        }
-                    }
-                    
-                    // 如果没有 AI 消息,创建新的工具消息
                     chatPage.chatModel = chatPage.chatModel.concat([
                         {
                             sender: "ai",
@@ -111,19 +95,26 @@ Window {
                     ])
                 }
 
-                function onErrorOccurred(message) {
-                    chatPage.chatModel = chatPage.chatModel.concat([
-                        { sender: "ai", message: "\u26A0\uFE0F " + message }
-                    ])
-                }
+        function onErrorOccurred(message) {
+            chatPage.chatModel = chatPage.chatModel.concat([
+                { sender: "ai", message: "\u26A0\uFE0F " + message }
+            ])
+        }
 
-                function onThinkingChanged(isThinking) {
-                    chatPage.isThinking = isThinking
-                }
+        function onThinkingChanged(isThinking) {
+            chatPage.isThinking = isThinking
+        }
+
+        function onSessionListUpdated(sessions) {
+            chatPage.sessionList = sessions
+        }
+
+        function onSessionLoaded(filename) {
+            chatPage.chatModel = []
+        }
             }
         }
     }
 
-    
-    
+    Component.onCompleted: chatBridge.refreshSessions()
 }

@@ -264,6 +264,7 @@ class Memory:
             
             # 手动设置其他属性（因为load方法不会在初始化时调用）
             memory.filename = session_data.get("filename", memory.filename)
+            memory.persist_path = f"session/{memory.filename}.json"
             memory.created_time = session_data.get("created_time", memory.created_time)
             memory.history=session_data.get("history", [])
             

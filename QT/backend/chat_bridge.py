@@ -77,6 +77,10 @@ class ChatBridge(QObject):
             self._worker = None
 
     @Slot()
+    def newSession(self):
+        self._current_memory = Memory()
+
+    @Slot()
     def clearHistory(self):
         self._current_memory.clear()
 
@@ -85,13 +89,28 @@ class ChatBridge(QObject):
         try:
             self._current_memory = Memory.load_session(filename)
             self.sessionLoaded.emit(filename)
+            self._rebuild_chat()
         except Exception as e:
             self.errorOccurred.emit(f"加载会话失败: {e}")
+
+    def _rebuild_chat(self):
+        """从 Memory.history 重建聊天消息到 QML"""
+        for entry in self._current_memory.history:
+            if "role" in entry and entry.get("role") == "user":
+                self.messageReceived.emit("user", entry.get("content", ""))
+            elif "input" in entry:
+                tool = entry.get("input", {}).get("tool", "")
+                output = entry.get("output", "")
+                if tool in ("talk", "finish"):
+                    self.messageReceived.emit("ai", output)
+                else:
+                    args = entry.get("input", {}).get("tool_args", {})
+                    self.toolCalled.emit(tool, str(args), output)
 
     @Slot(str)
     def deleteSession(self, filename):
         import os as _os
-        session_path = _os.path.join("session", filename)
+        session_path = _os.path.join("session", filename + ".json")
         if _os.path.exists(session_path):
             _os.remove(session_path)
         self.refreshSessions()
