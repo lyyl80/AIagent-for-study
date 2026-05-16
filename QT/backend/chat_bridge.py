@@ -132,6 +132,13 @@ class ChatBridge(QObject):
         return list_tools()
 
     @Slot(result=list)
+    def getModelOptions(self):
+        from core.llm.client import ModelManager
+        mgr = ModelManager()
+        opts = mgr.get_model_options()
+        return [{"label": k, "key": v["key"]} for k, v in opts.items()]
+
+    @Slot(result=list)
     def getTools(self):
         result = []
         for name, (func, desc, schema) in TOOL_REGISTRY.items():
@@ -155,3 +162,6 @@ class ChatBridge(QObject):
             return str(result)
         except Exception as e:
             return f"调用失败: {e}"
+        
+
+  
