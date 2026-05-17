@@ -4,7 +4,7 @@ QtObject {
     id: theme
 
     // ====== 亮/暗模式切换开关 ======
-    property bool darkMode: false
+    property bool darkMode: true
 
     // ====== 页面基础色 ======
     readonly property color bgColor:           darkMode ? "#1b1b1b" : "#f0f0f0"   // 页面主背景色

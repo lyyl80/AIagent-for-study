@@ -8,6 +8,7 @@ from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
 from core.tools import TOOL_REGISTRY
+from core.config.settings import switch_model
 
 
 class ChatBridge(QObject):
@@ -162,6 +163,10 @@ class ChatBridge(QObject):
             return str(result)
         except Exception as e:
             return f"调用失败: {e}"
+        
+    @Slot(str)
+    def switchModel(self, model): 
+        switch_model(model)
         
 
   

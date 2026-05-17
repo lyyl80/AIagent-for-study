@@ -41,6 +41,8 @@ Rectangle {
                     textRole: "label"
                     currentIndex: 0
                     width: 260
+
+                    
                     background: Rectangle {
                         radius: 6
                         color: theme ? theme.inputBg : "#fff"
