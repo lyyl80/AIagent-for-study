@@ -7,7 +7,7 @@ from PySide6.QtCore import QObject, Slot, Signal, Property
 from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
-from core.tools import TOOL_REGISTRY
+from core.llm.client import ApiClient, ModelManager
 from core.config.settings import Debugmode
 
 
@@ -48,7 +48,7 @@ class ChatBridge(QObject):
         self._current_memory.add_message("user", text)
         self.messageReceived.emit("user", text)
 
-        self._worker = ChatWorker(text, memory=self._current_memory)
+        self._worker = ChatWorker(text, api_client=ApiClient(), memory=self._current_memory)
         self._worker.textChunk.connect(self._on_text_chunk)
         self._worker.toolInvoked.connect(self._on_tool_invoked)
         self._worker.stepCompleted.connect(self._on_step_completed)
@@ -135,24 +135,24 @@ class ChatBridge(QObject):
 
     @Slot(result=list)
     def getModelOptions(self):
-        from core.llm.client import ModelManager
-        mgr = ModelManager()
-        opts = mgr.get_model_options()
-        return [{"label": k, "key": v["key"]} for k, v in opts.items()]
+        opts = ModelManager().get_model_options()
+        return [{"label": k, "key": v["key"], "category": v["category"]} for k, v in opts.items()]
 
     @Slot(result=list)
     def getTools(self):
+        from core.llm.client import TOOL_DEFINITIONS
         result = []
-        for name, (func, desc, schema) in TOOL_REGISTRY.items():
-            if name in ("talk", "finish"):
+        for td in TOOL_DEFINITIONS:
+            if td.name in ("talk", "finish"):
                 continue
-            entry = {
-                "name": name,
-                "description": desc.strip(),
-                "required_params": ", ".join(schema.get("required_params", [])) if schema else "",
-                "optional_params": ", ".join(schema.get("optional_params", [])) if schema else ""
-            }
-            result.append(entry)
+            required = ", ".join(td.input_schema.get("required", []))
+            optional = ", ".join(k for k in td.input_schema.get("properties", {}) if k not in td.input_schema.get("required", []))
+            result.append({
+                "name": td.name,
+                "description": td.description,
+                "required_params": required,
+                "optional_params": optional
+            })
         return result
 
     @Slot(str, str, result=str)
@@ -167,8 +167,15 @@ class ChatBridge(QObject):
         
     @Slot(str)
     def switchModel(self, model): 
-        from core.llm.client import ModelManager
-        ModelManager.active_model = model
+        ApiClient.active_model = model
+
+    @Slot(str, str)
+    def addCustomModel(self, key, name):
+        ModelManager().add_custom_model(key, name)
+
+    @Slot(str)
+    def removeCustomModel(self, key):
+        ModelManager().remove_custom_model(key)
         
 
   
