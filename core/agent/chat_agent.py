@@ -49,17 +49,19 @@ class ChatAgent:
     def __init__(self, user_input: Optional[str] = None, memory: Optional[Memory] = None):
         
         self.llm_json = model_manager.llm_json
-        model_info = model_manager.get_model_by_key(get_active_model())
-        self.llm = lambda messages, system_prompt="": model_manager.call_model(
-            model_info, 
-            [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
-            system_prompt
-        )
         self.history = memory or Memory(user_input=user_input)
         self.user_input = user_input
         self.tools = TOOL_REGISTRY
         self.max_steps = 100
-        self.debug = Debugmode # 调试模式
+        self.debug = Debugmode
+
+    def _get_llm(self):
+        model_info = model_manager.get_model_by_key(get_active_model())
+        return lambda messages, system_prompt="": model_manager.call_model(
+            model_info,
+            [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
+            system_prompt
+        )
         
     def _format_history(self, max_chars: int = 8000) -> str:
         """格式化历史：保留全部用户消息 + 尽量多的最近工具步骤"""
@@ -198,7 +200,7 @@ class ChatAgent:
             tool_name=tool_name,
             tool_args=tool_args
         )
-        return self.llm(messages)
+        return self._get_llm()(messages)
     def execute(self, action: Dict[str, Any]) -> Tuple[Any, str, bool, bool]:
         """执行步骤：调用工具并处理结果
         
