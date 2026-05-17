@@ -41,7 +41,12 @@ Rectangle {
                     textRole: "label"
                     currentIndex: 0
                     width: 260
-
+                    
+                    onCurrentIndexChanged: {
+                        if (currentIndex >= 0 && currentIndex < root.models.length) {
+                            chatBridge.switchModel(root.models[currentIndex].key)
+                        }
+                    }
                     
                     background: Rectangle {
                         radius: 6
