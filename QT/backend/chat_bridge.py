@@ -140,7 +140,7 @@ class ChatBridge(QObject):
 
     @Slot(result=list)
     def getTools(self):
-        from core.llm.client import TOOL_DEFINITIONS
+        from core.tools import TOOL_DEFINITIONS
         result = []
         for td in TOOL_DEFINITIONS:
             if td.name in ("talk", "finish"):

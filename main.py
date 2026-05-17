@@ -1,130 +1,178 @@
-
-""" AI Agent - 命令行界面
-"""
-from typing import Optional
-from core.agent.chat_agent import ChatAgent
-from core.agent.memory import Memory
+"""AI Agent - 命令行界面"""
+import sys
+import os
 from datetime import datetime
 
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-def run_interactive_mode(verbose: bool = False):
-    """运行交互模式
-    
-    参数:
-        session_path: 会话文件路径
-        verbose: 是否显示详细输出
-    """
-    print("===  AI Agent 交互模式 ===")
-    print("输入 'exit' 或 'quit' 退出，输入 'help' 查看帮助")
-    print("输入 'clear' 清空当前会话历史")
-    print("输入 'list' 列出所有会话")
-    print("输入 'load <会话文件名>' 加载指定会话")
+from core.llm.client import ApiClient
+from core.runtime.conversation import ConversationRuntime
+from core.runtime.types import ConversationMessage, TextBlock
+from core.runtime.permissions import PermissionPolicy, PermissionMode
+from core.prompt.builder import SystemPromptBuilder
+from core.tools import call_tool
+from core.agent.memory import Memory
+
+
+class ToolExecutor:
+    def execute(self, tool_name: str, tool_input: dict) -> str:
+        try:
+            return str(call_tool(tool_name, **tool_input))
+        except Exception as e:
+            return f"Error: {e}"
+
+
+def run_interactive_mode(verbose=False):
+    print("=== AI Agent 交互模式 ===")
+    print("exit/quit 退出 | clear 清空 | history 步骤 | list 会话 | load <文件> 加载 | help 帮助")
     print("-" * 50)
-    
-    # 初始化记忆
-    session_id = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    agent = ChatAgent(user_input="")  # 初始化一个默认的agent实例
-    
-    if verbose:
-        print(f"会话ID: {session_id}")
-        print(f"会话文件: {agent.history.filename}")
-    
+
+    memory = Memory(user_input="")
+    runtime = ConversationRuntime(
+        system_prompt=SystemPromptBuilder().build(),
+        max_iterations=100,
+        permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
+    )
+
+    def _new_runtime():
+        return ConversationRuntime(
+            system_prompt=SystemPromptBuilder().build(),
+            max_iterations=100,
+            permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
+        )
+
+    def save_msg(role, content, tool_name="", tool_args=""):
+        if role == "user":
+            memory.add_message("user", content)
+        elif role == "tool":
+            memory.add_conversation({
+                "input": {"tool": tool_name, "tool_args": tool_args},
+                "output": content,
+            })
+
+    client = ApiClient()
+
     while True:
         try:
-            # 获取用户输入
-            user_input = input("\nYou: ").strip()
-            # 使用同一个agent实例，不重新创建
-            agent.user_input = user_input  # 更新任务
-            
-            if verbose:
-                print(f"已加载 {len(agent.history.messages)} 条对话消息, {len(agent.history.history)} 条步骤记录")
-            # 处理命令
-            lower_input = user_input.lower()
-            match lower_input:
-                case "exit" | "quit":
-                    agent.history.save()
-                    print("退出交互模式。再见！")
-                    break
-                case "help":
-                    print("可用命令:")
-                    print("  exit/quit - 退出程序")
-                    print("  clear - 清空当前会话历史")
-                    print("  history - 显示步骤历史记录")
-                    print("  messages - 显示对话消息")
-                    print("  summary - 显示记忆总结")
-                    print("  list - 列出所有会话")
-                    print("  load <文件名> - 加载指定会话")
-                    print("  其他任何输入都将作为任务执行")
-                    continue
-                case "clear":
-                    agent.history.clear()
-                    print("会话历史已清空")
-                    continue
-                case "history":
-                    history = agent.history.get_history()
-                    if history:
-                        for i, item in enumerate(history, 1):
-                            print(f"{i}. {item.get('input', {}).get('tool', 'unknown')}: "
-                                  f"{item.get('output', '')[:100]}")
-                    else:
-                        print("暂无步骤历史记录")
-                    continue
-                case "list":
-                    sessions = Memory.list_sessions()
-                    if sessions:
-                        print(f"找到 {len(sessions)} 个会话:")
-                        for i, session in enumerate(sessions, 1):
-                            filename = session.get("filename", "未知")
-                            summary = session.get("summary", "无摘要")
-                            created_time = session.get("created_time", "未知")
-                            if len(summary) > 50:
-                                summary = summary[:50] + "..."
-                            print(f"{i}. {filename}: {summary} ({created_time[:19]})")
-                    else:
-                        print("暂无保存的会话")
-                    continue
-                
-                case _ if user_input.lower().startswith("load "):
-                    # 加载指定会话
-                    filename = user_input[5:].strip()
-                    try:
-                        agent.history = Memory.load_session(filename)
-                        print(f"已加载会话: {filename}")
-                        if verbose:
-                            print(f"会话ID: {agent.history.session_id}")
-                            print(f"摘要: {agent.history.summary}")
-                            print(f"消息数: {len(agent.history.messages)}")
-                    except Exception as e:
-                        print(f"加载会话失败: {e}")
-                    continue
-                
-                case _:
-                    # 执行任务
-                    if not user_input:
-                        continue
-                    
-                    # 添加用户消息到记忆
-                    agent.history.add_message("user", user_input)
-                    
-                    # 执行任务（内部已通过 step() 记录每一步到历史）
-                    agent.run()
-                
+            raw = input("\nYou: ").strip()
+            if not raw:
+                continue
+            lower = raw.lower()
+
+            if lower in ("exit", "quit"):
+                memory.save()
+                print("再见！")
+                break
+
+            if lower == "help":
+                print("  exit/quit - 退出")
+                print("  clear     - 清空当前会话")
+                print("  history   - 显示工具步骤历史")
+                print("  messages  - 显示对话消息")
+                print("  list      - 列出所有会话")
+                print("  load <文件名> - 加载指定会话")
+                continue
+
+            if lower == "clear":
+                memory.clear()
+                runtime = _new_runtime()
+                print("会话已清空")
+                continue
+
+            if lower == "history":
+                h = memory.get_history()
+                if not h:
+                    print("暂无步骤记录")
+                else:
+                    for i, item in enumerate(h, 1):
+                        inp = item.get("input", {})
+                        out = str(item.get("output_summary") or item.get("output", ""))
+                        tag = inp.get("tool", "?")
+                        if item.get("failed"):
+                            tag += " (失败)"
+                        if len(out) > 120:
+                            out = out[:120] + "..."
+                        print(f"{i}. [{tag}] {out}")
+                continue
+
+            if lower == "messages":
+                msgs = memory.messages
+                if not msgs:
+                    print("暂无对话消息")
+                else:
+                    for i, m in enumerate(msgs, 1):
+                        print(f"{i}. [{m.get('role', '?')}] {m.get('content', '')}")
+                continue
+
+            if lower == "list":
+                sessions = Memory.list_sessions()
+                if not sessions:
+                    print("暂无保存的会话")
+                else:
+                    for i, s in enumerate(sessions, 1):
+                        summary = (s.get("summary") or "")[:50]
+                        print(f"{i}. {s['filename']}: {summary}")
+                continue
+
+            if lower.startswith("load "):
+                filename = raw[5:].strip()
+                try:
+                    memory = Memory.load_session(filename)
+                    runtime = _new_runtime()
+                    for msg in memory.messages:
+                        if msg.get("role") == "user":
+                            runtime.messages.append(
+                                ConversationMessage.user_text(msg.get("content", ""))
+                            )
+                    for entry in memory.history:
+                        inp = entry.get("input", {})
+                        tool = inp.get("tool", "")
+                        out = entry.get("output", "")
+                        if tool in ("talk", "finish"):
+                            runtime.messages.append(
+                                ConversationMessage.assistant([TextBlock(text=out)])
+                            )
+                        elif tool == "user":
+                            runtime.messages.append(
+                                ConversationMessage.user_text(
+                                    inp.get("tool_args", {}).get("message", "")
+                                )
+                            )
+                    print(f"已加载会话: {filename}")
+                except Exception as e:
+                    print(f"加载失败: {e}")
+                continue
+
+            runtime.run_turn(
+                raw, client, ToolExecutor(),
+                on_text=lambda block: print(
+                    block.text if hasattr(block, 'text') else str(block),
+                    end="", flush=True
+                ),
+                on_tool=lambda name, args, result, failed: (
+                    print(f"\n[工具 {name}{' 失败' if failed else ''}] "
+                          f"{str(result)[:200]}"),
+                    save_msg("tool", str(result), name, str(args)),
+                ),
+                on_save=save_msg,
+            )
+            print()
+
         except KeyboardInterrupt:
-            print("\n输入 'exit' 退出程序")
+            print("\n输入 'exit' 退出")
         except EOFError:
-            print("\n检测到文件结束符，退出程序")
             break
         except Exception as e:
-            print(f"执行时出错: {e}")
+            print(f"错误: {e}")
             if verbose:
                 import traceback
                 traceback.print_exc()
 
 
 def main():
-    """主函数"""
-# 默认进入交互模式
-    run_interactive_mode(verbose=False)
+    run_interactive_mode()
 
 
 if __name__ == "__main__":

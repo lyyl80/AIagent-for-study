@@ -11,128 +11,7 @@ from core.runtime.types import (
     ToolDefinition, ApiRequest,
 )
 from core.runtime.permissions import PermissionMode
-
-
-TOOL_DEFINITIONS = [
-    ToolDefinition(
-        name="read_file",
-        description="读取文件内容",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "文件路径"},
-                "start_line": {"type": "integer", "description": "开始行号(1-based)"},
-                "end_line": {"type": "integer", "description": "结束行号"},
-                "search": {"type": "string", "description": "搜索字符串，返回匹配行"},
-            },
-            "required": ["file_path"]
-        }
-    ),
-    ToolDefinition(
-        name="write_file",
-        description="写入文件内容",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "文件路径"},
-                "content": {"type": "string", "description": "要写入的内容"},
-            },
-            "required": ["file_path", "content"]
-        }
-    ),
-    ToolDefinition(
-        name="shell",
-        description="执行shell命令(Windows PowerShell)",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "command": {"type": "string", "description": "命令字符串"},
-                "timeout": {"type": "integer", "description": "超时时间(秒)", "default": 30},
-                "cwd": {"type": "string", "description": "工作目录"},
-            },
-            "required": ["command"]
-        }
-    ),
-    ToolDefinition(
-        name="talk",
-        description="与用户对话/回复/说明进度",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "message": {"type": "string", "description": "回复内容"},
-            },
-            "required": ["message"]
-        }
-    ),
-    ToolDefinition(
-        name="replace_content",
-        description="替换文件中的内容(精确匹配)",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "file_path": {"type": "string", "description": "文件路径"},
-                "old_content": {"type": "string", "description": "要替换的旧内容"},
-                "new_content": {"type": "string", "description": "新内容"},
-            },
-            "required": ["file_path", "old_content", "new_content"]
-        }
-    ),
-    ToolDefinition(
-        name="web_search",
-        description="网络搜索",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "搜索查询"},
-            },
-            "required": ["query"]
-        }
-    ),
-    ToolDefinition(
-        name="web_content",
-        description="获取网页内容",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "urls": {"type": "array", "items": {"type": "string"}, "description": "网址列表"},
-            },
-            "required": ["urls"]
-        }
-    ),
-    ToolDefinition(
-        name="finish",
-        description="完成任务",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "response": {"type": "string", "description": "完成说明"},
-            },
-            "required": []
-        }
-    ),
-    ToolDefinition(
-        name="weather",
-        description="查询天气",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "city": {"type": "string", "description": "城市名称"},
-            },
-            "required": ["city"]
-        }
-    ),
-    ToolDefinition(
-        name="speaking",
-        description="文字转语音朗读",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "text": {"type": "string", "description": "文本内容"},
-            },
-            "required": ["text"]
-        }
-    ),
-]
+from core.tools import TOOL_DEFINITIONS
 
 
 class ApiClient:
@@ -204,7 +83,7 @@ class ApiClient:
             raise Exception("未找到DEEPSEEK_API_KEY环境变量")
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
         full_messages = [{"role": "system", "content": system}] + messages
-        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True)
+        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True, max_tokens=4096)
         full_content = ""
         for chunk in response:
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
@@ -214,7 +93,7 @@ class ApiClient:
     def _call_local(self, model_key: str, messages: List[Dict], system: str) -> str:
         full_messages = [{"role": "system", "content": system}] + messages
         try:
-            response = chat(model=model_key, messages=full_messages, stream=True)
+            response = chat(model=model_key, messages=full_messages, stream=True, options={"num_predict": 4096})
             full_content = ""
             for chunk in response:
                 content = chunk.get("message", {}).get("content", "")
