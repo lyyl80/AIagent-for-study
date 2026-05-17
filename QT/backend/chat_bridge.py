@@ -8,7 +8,7 @@ from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
 from core.tools import TOOL_REGISTRY
-from core.config.settings import switch_model
+from core.config.settings import set_active_model
 
 
 class ChatBridge(QObject):
@@ -98,11 +98,12 @@ class ChatBridge(QObject):
             self.errorOccurred.emit(f"加载会话失败: {e}")
 
     def _rebuild_chat(self):
-        """从 Memory.history 重建聊天消息到 QML"""
+        """从 Memory 重建聊天消息到 QML"""
+        for msg in self._current_memory.messages:
+            if msg.get("role") == "user":
+                self.messageReceived.emit("user", msg.get("content", ""))
         for entry in self._current_memory.history:
-            if "role" in entry and entry.get("role") == "user":
-                self.messageReceived.emit("user", entry.get("content", ""))
-            elif "input" in entry:
+            if "input" in entry:
                 tool = entry.get("input", {}).get("tool", "")
                 output = entry.get("output", "")
                 if tool in ("talk", "finish"):
@@ -166,7 +167,7 @@ class ChatBridge(QObject):
         
     @Slot(str)
     def switchModel(self, model): 
-        switch_model(model)
+        set_active_model(model)
         
 
   

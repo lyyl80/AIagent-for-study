@@ -6,7 +6,7 @@ from core.tools import call_tool, get_tool_description, TOOL_REGISTRY
 import sys
 import time
 import threading
-from core.config.settings import Debugmode, MODEL_ING
+from core.config.settings import Debugmode, get_active_model
 
 model_manager = ModelManager()
 
@@ -49,7 +49,7 @@ class ChatAgent:
     def __init__(self, user_input: Optional[str] = None, memory: Optional[Memory] = None):
         
         self.llm_json = model_manager.llm_json
-        model_info = model_manager.get_model_by_key(MODEL_ING)
+        model_info = model_manager.get_model_by_key(get_active_model())
         self.llm = lambda messages, system_prompt="": model_manager.call_model(
             model_info, 
             [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
@@ -61,25 +61,32 @@ class ChatAgent:
         self.max_steps = 100
         self.debug = Debugmode # 调试模式
         
-    def _format_history(self, max_chars: int = 6000) -> str:
+    def _format_history(self, max_chars: int = 8000) -> str:
         """格式化历史：保留全部用户消息 + 尽量多的最近工具步骤"""
-        entries = self.history.get_history(200)
-        user_msgs = []
-        tool_steps = []
 
-        for e in entries:
-            if "role" in e and e.get("role") == "user":
-                user_msgs.append(f"用户: {e.get('content', '')}")
-            elif "input" in e:
+        def _truncate_output(text: str, tool: str, limit: int = 300) -> str:
+            out = str(text)
+            if not out:
+                return ""
+            if tool in ("shell", "read_file"):
+                if len(out) > 800:
+                    return out[:600] + f"\n    ... (剩余 {len(out)-600} 字符)"
+            return out if len(out) <= limit else out[:limit] + "..."
+
+        user_msgs = [f"用户: {m.get('content', '')}" for m in self.history.messages if m.get("role") == "user"]
+
+        tool_steps = []
+        for e in self.history.history:
+            if "input" in e:
                 tool = e["input"].get("tool", "")
                 args = e["input"].get("tool_args", {})
-                out = e.get("output", "")
+                out = e.get("output_summary") or e.get("output", "")
                 failed = e.get("failed", False)
                 if tool in ("talk", "finish"):
                     tool_steps.append(f"AI: {out}")
                 else:
                     tool_steps.append(f"工具[{tool}] {args}")
-                    tool_steps.append(f"  → {'失败: ' if failed else ''}{str(out)[:200]}")
+                    tool_steps.append(f"  → {'失败: ' if failed else ''}{_truncate_output(out, tool)}")
 
         base = "\n".join(user_msgs)
         keep = []

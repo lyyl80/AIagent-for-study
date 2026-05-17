@@ -93,34 +93,25 @@ class Memory:
 
     
     def add_conversation(self, conversation: Dict[str, Any]) -> None:
-        """添加步骤历史记录
-        
-        参数:
-            conversation: 步骤记录字典，包含input、output、reflect等字段
-        """
+        """添加步骤历史记录"""
+        output = conversation.get("output", "")
+        if isinstance(output, str) and len(output) > 1000:
+            conversation["output_summary"] = output[:600] + f"\n... (全文 {len(output)} 字符)"
+        else:
+            conversation["output_summary"] = output
+
         self.history.append(conversation)
-        
-        # 限制历史记录长度
+
         if len(self.history) > self.max_history:
             self.history = self.history[-self.max_history:]
-        
-        # 自动保存
+
         if self.persist_path:
             self.save()
-    
+
     def add_message(self, role: str, content: str) -> None:
-        """添加对话消息
-        
-        参数:
-            role: 角色（user/assistant）
-            content: 消息内容
-        """
-        self.history.append({
-            "role": role,
-            "content": content
-        })
-        
-        # 自动保存
+        entry = {"role": role, "content": content}
+        self.history.append(entry)
+        self.messages.append(entry)
         if self.persist_path:
             self.save()
     
@@ -139,10 +130,8 @@ class Memory:
     
     
     def clear(self) -> None:
-        """清空历史记录和消息"""
         self.history.clear()
-    
-        
+        self.messages.clear()
         if self.persist_path:
             self.save()
 
@@ -155,7 +144,8 @@ class Memory:
         data = {
             "session_id": self.session_id,
             "filename": self.filename,
-            "history": self.history,  
+            "history": self.history,
+            "messages": self.messages,
             "max_history": self.max_history,
             "created_time": self.created_time
         }
@@ -181,6 +171,7 @@ class Memory:
             self.filename = data.get("filename", self.filename)
             self.created_time = data.get("created_time", self.created_time)
             self.history = data.get("history", self.history)
+            self.messages = data.get("messages", [])
             self.max_history = data.get("max_history", self.max_history)
         except Exception as e:
             print(f"加载记忆失败: {e}")
@@ -195,6 +186,7 @@ class Memory:
             "session_id": self.session_id,
             "filename": self.filename,
             "history": self.history,
+            "messages": self.messages,
             "max_history": self.max_history,
             "created_time": self.created_time
         }
@@ -265,7 +257,8 @@ class Memory:
             memory.filename = session_data.get("filename", memory.filename)
             memory.persist_path = f"session/{memory.filename}.json"
             memory.created_time = session_data.get("created_time", memory.created_time)
-            memory.history=session_data.get("history", [])
+            memory.history = session_data.get("history", [])
+            memory.messages = session_data.get("messages", [])
             
             return memory
         except Exception as e:
