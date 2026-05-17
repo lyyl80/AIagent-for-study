@@ -8,7 +8,7 @@ from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
 from core.tools import TOOL_REGISTRY
-from core.config.settings import set_active_model
+from core.config.settings import Debugmode
 
 
 class ChatBridge(QObject):
@@ -167,7 +167,8 @@ class ChatBridge(QObject):
         
     @Slot(str)
     def switchModel(self, model): 
-        set_active_model(model)
+        from core.llm.client import ModelManager
+        ModelManager.active_model = model
         
 
   

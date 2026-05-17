@@ -1,9 +1,12 @@
 from ollama import chat
 from openai import OpenAI
 import json
+import os
 from core.config import *
-    # 模型管理类 - 遵循Ollama本地模型调用规范
+
 class ModelManager:
+    active_model = "deepseek-v4-flash"
+
     def __init__(self):
         self.available_models = {
             "云端模型": {
@@ -122,7 +125,7 @@ class ModelManager:
                     enhanced_content = current_messages[0]["content"] + "\n\n重要：请返回纯JSON格式，不要包含任何其他文本、解释或代码块标记。确保JSON格式完全正确。"
                     current_messages = [{"role": "user", "content": enhanced_content}]
                 
-                response = self.call_model(self.get_model_by_key(MODEL_ING), current_messages, system_prompt, output=False)
+                response = self.call_model(self.get_model_by_key(self.active_model), current_messages, system_prompt, output=False)
                 
                 # 增强的JSON清理逻辑
                 cleaned = self._clean_json_response(response)

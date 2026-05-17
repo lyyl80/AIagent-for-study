@@ -6,7 +6,7 @@ from core.tools import call_tool, get_tool_description, TOOL_REGISTRY
 import sys
 import time
 import threading
-from core.config.settings import Debugmode, get_active_model
+from core.config.settings import Debugmode
 
 model_manager = ModelManager()
 
@@ -56,7 +56,7 @@ class ChatAgent:
         self.debug = Debugmode
 
     def _get_llm(self):
-        model_info = model_manager.get_model_by_key(get_active_model())
+        model_info = model_manager.get_model_by_key(model_manager.active_model)
         return lambda messages, system_prompt="": model_manager.call_model(
             model_info,
             [{"role": "user", "content": messages}] if isinstance(messages, str) else messages,
