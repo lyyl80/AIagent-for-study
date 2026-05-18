@@ -52,7 +52,7 @@ def save(env_var_name="", active_model="", custom_models=None):
     data = {
         "env_var_name": env_var_name or "",
         "active_model": active_model or "",
-        "custom_models": custom_models or [],
+        "custom_models": custom_models or {},
     }
     with open(_config_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -61,12 +61,12 @@ def save(env_var_name="", active_model="", custom_models=None):
 def load():
     """从 JSON 文件加载用户设置，返回 dict"""
     if not os.path.exists(_config_path):
-        return {"env_var_name": "", "active_model": "", "custom_models": []}
+        return {"env_var_name": "", "active_model": "", "custom_models": {}}
     try:
         with open(_config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError):
-        return {"env_var_name": "", "active_model": "", "custom_models": []}
+        return {"env_var_name": "", "active_model": "", "custom_models": {}}
 
 
 # 调试模式开关

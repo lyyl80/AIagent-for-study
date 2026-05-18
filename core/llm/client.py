@@ -338,15 +338,8 @@ class ModelManager:
         """初始化模型管理器（当前无需特殊初始化）"""
         pass
 
-    def add_custom_model(self, key, name=None):
-        """
-        添加自定义模型到注册表
-        
-        Args:
-            key (str): 模型标识符
-            name (Optional[str]): 模型显示名称，默认为key
-        """
-        self.available_models.setdefault("自定义模型", {})[key] = {"name": name or key, "type": "local"}
+    def add_custom_model(self, key, name=None, model_type="local"):
+        self.available_models.setdefault("自定义模型", {})[key] = {"name": name or key, "type": model_type}
 
     def remove_custom_model(self, key):
         """

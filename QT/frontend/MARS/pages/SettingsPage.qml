@@ -65,34 +65,174 @@ Rectangle {
                         verticalAlignment: Text.AlignVCenter
                         leftPadding: 10
                     }
+
+                    delegate: ItemDelegate {
+                        width: modelCombo.width
+                        height: 32
+                        highlighted: modelCombo.highlightedIndex === index
+                        contentItem: Row {
+                            spacing: 6
+                            width: parent.width
+                            Label {
+                                text: modelData.label
+                                font.pixelSize: 12
+                                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                                color: theme ? theme.textColor : "#333"
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                                width: parent.width - (delBtn.visible ? delBtn.width + 6 : 0)
+                            }
+                            Label {
+                                id: delBtn
+                                visible: modelData.category === "自定义模型"
+                                text: "✕"
+                                font.pixelSize: 11
+                                color: theme ? theme.secondaryText : "#999"
+                                antialiasing: true
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            chatBridge.removeCustomModel(modelData.key)
+                                            root.models = chatBridge.getModelOptions()
+                                        }
+                                }
+                            }
+                        }
+                        background: Rectangle {
+                            radius: 4
+                            color: highlighted
+                                   ? (theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.08) : "#e0e0e0")
+                                   : "transparent"
+                        }
+                    }
+                }
+
+                // 自定义模型
+                Label {
+                    text: "自定义模型"
+                    font.pixelSize: 13
+                    font.bold: true
+                    font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                    color: theme ? theme.textColor : "#333"
+                    antialiasing: true
                 }
 
                 Row {
                     spacing: 8
 
-                    TextField {
-                        id: customModelInput
-                        width: 200
-                        placeholderText: "输入自定义模型名..."
-                        font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                        color: theme ? theme.textColor : "#333"
-                        placeholderTextColor: theme ? theme.secondaryText : "#909090"
-                        background: Rectangle {
-                            radius: 6
-                            color: theme ? theme.inputBg : "#fff"
-                            border.color: theme ? theme.inputBorder : "#ccc"
-                            border.width: 1
+                    Column {
+                        spacing: 4
+                        Label {
+                            text: "显示名"
+                            font.pixelSize: 10
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                            color: theme ? theme.secondaryText : "#888"
+                            antialiasing: true
+                        }
+                        TextField {
+                            id: displayNameInput
+                            width: 160
+                            placeholderText: "如: GPT-4o"
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                            font.pixelSize: 12
+                            color: theme ? theme.textColor : "#333"
+                            placeholderTextColor: theme ? theme.secondaryText : "#909090"
+                            background: Rectangle {
+                                radius: 6; color: theme ? theme.inputBg : "#fff"
+                                border.color: theme ? theme.inputBorder : "#ccc"; border.width: 1
+                            }
+                        }
+                    }
+
+                    Column {
+                        spacing: 4
+                        Label {
+                            text: "实际名"
+                            font.pixelSize: 10
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                            color: theme ? theme.secondaryText : "#888"
+                            antialiasing: true
+                        }
+                        TextField {
+                            id: modelKeyInput
+                            width: 160
+                            placeholderText: "如: gpt-4o"
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                            font.pixelSize: 12
+                            color: theme ? theme.textColor : "#333"
+                            placeholderTextColor: theme ? theme.secondaryText : "#909090"
+                            background: Rectangle {
+                                radius: 6; color: theme ? theme.inputBg : "#fff"
+                                border.color: theme ? theme.inputBorder : "#ccc"; border.width: 1
+                            }
+                        }
+                    }
+
+                    Column {
+                        spacing: 4
+                        Label {
+                            text: "类型"
+                            font.pixelSize: 10
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                            color: theme ? theme.secondaryText : "#888"
+                            antialiasing: true
+                        }
+                        ComboBox {
+                            id: modelTypeCombo
+                            model: ["local", "cloud"]
+                            currentIndex: 0
+                            width: 100
+                            font.pixelSize: 12
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+
+                            background: Rectangle {
+                                radius: 6; color: theme ? theme.inputBg : "#fff"
+                                border.color: theme ? theme.inputBorder : "#ccc"; border.width: 1
+                            }
+
+                            contentItem: Label {
+                                text: modelTypeCombo.displayText
+                                font: modelTypeCombo.font
+                                color: theme ? theme.textColor : "#333"
+                                verticalAlignment: Text.AlignVCenter
+                                leftPadding: 8
+                            }
+
+                            popup: Popup {
+                                y: modelTypeCombo.height + 2
+                                width: modelTypeCombo.width
+                                implicitHeight: contentItem.implicitHeight
+                                padding: 4
+                                background: Rectangle {
+                                    radius: 6
+                                    color: theme ? theme.cardColor : "#fff"
+                                    border.color: theme ? theme.inputBorder : "#ccc"
+                                }
+                                contentItem: ListView {
+                                    clip: true
+                                    implicitHeight: contentHeight
+                                    model: modelTypeCombo.delegateModel
+                                    currentIndex: modelTypeCombo.highlightedIndex
+                                }
+                            }
                         }
                     }
 
                     Button {
                         text: "添加"
                         flat: true
-                        enabled: customModelInput.text.trim() !== ""
+                        anchors.bottom: parent.bottom
+                        enabled: displayNameInput.text.trim() !== "" && modelKeyInput.text.trim() !== ""
                         hoverEnabled: true
                         onClicked: {
-                            chatBridge.addCustomModel(customModelInput.text.trim())
-                            customModelInput.text = ""
+                            chatBridge.addCustomModel(
+                                modelKeyInput.text.trim(),
+                                displayNameInput.text.trim(),
+                                modelTypeCombo.currentText
+                            )
+                            displayNameInput.text = ""
+                            modelKeyInput.text = ""
                             root.models = chatBridge.getModelOptions()
                         }
                         background: Rectangle {

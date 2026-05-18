@@ -71,14 +71,18 @@ class ChatBridge(QObject):
             ApiClient.env_var_name = data["env_var_name"]
         if data.get("active_model"):
             ApiClient.active_model = data["active_model"]
-        for key in data.get("custom_models", []):
-            ModelManager().add_custom_model(key)
+        custom = data.get("custom_models", {})
+        if isinstance(custom, list):
+            custom = {k: {"name": k, "type": "local"} for k in custom}
+        for key, info in custom.items():
+            ModelManager().add_custom_model(key, info.get("name"), info.get("type", "local"))
 
     def _persist_settings(self):
-        custom = []
+        custom = {}
         for cat, models in ModelManager.available_models.items():
             if cat == "自定义模型":
-                custom.extend(models.keys())
+                for key, info in models.items():
+                    custom[key] = {"name": info.get("name", key), "type": info.get("type", "local")}
         save_settings(
             env_var_name=ApiClient.env_var_name,
             active_model=ApiClient.active_model,
@@ -379,16 +383,9 @@ class ChatBridge(QObject):
             ApiClient.env_var_name = name.strip()
             self._persist_settings()
 
-    @Slot(str, str)
-    def addCustomModel(self, key, name):
-        """
-        添加自定义模型
-        
-        Args:
-            key (str): 模型标识符
-            name (str): 模型显示名称
-        """
-        ModelManager().add_custom_model(key, name)
+    @Slot(str, str, str)
+    def addCustomModel(self, key, name, model_type):
+        ModelManager().add_custom_model(key, name, model_type)
         self._persist_settings()
 
     @Slot(str)
