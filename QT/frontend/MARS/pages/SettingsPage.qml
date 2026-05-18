@@ -237,13 +237,16 @@ Rectangle {
                         }
                         background: Rectangle {
                             radius: 6
-                            color: {
-                                if (!parent.enabled) return theme ? theme.dividerColor : "#555"
-                                if (parent.pressed) return Qt.darker(theme ? theme.accentColor : "#7c3aed", 1.2)
-                                if (parent.hovered) return Qt.lighter(theme ? theme.accentColor : "#7c3aed", 1.15)
-                                return theme ? theme.accentColor : "#7c3aed"
-                            }
+                            color: theme ? theme.accentColor : "#7c3aed"
                             Behavior on color { ColorAnimation { duration: 120 } }
+                            Rectangle {
+                                anchors.fill: parent; radius: 6
+                                color: !parent.parent.enabled ? (theme ? theme.dividerColor : "#555")
+                                     : parent.parent.pressed ? Qt.rgba(0,0,0,0.25)
+                                     : parent.parent.hovered ? Qt.rgba(1,1,1,0.2)
+                                     : "transparent"
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                            }
                         }
                         contentItem: Label {
                             anchors.centerIn: parent

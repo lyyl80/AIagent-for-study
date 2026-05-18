@@ -31,6 +31,9 @@ Rectangle {
             color: theme ? theme.cardColor : "#2d2d2d"
             Layout.preferredWidth: 220
             Layout.fillHeight: true
+            radius: theme ? theme.cardRadius : 12
+            layer.enabled: true
+            layer.samples: 4
 
             ColumnLayout {
                 anchors.fill: parent
@@ -55,10 +58,25 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 6
 
-                        Icon {
-                            iconName: "corner-right"
-                            iconColor: theme ? theme.textColor : "#e0e0e0"
-                            size: 14
+                        Button {
+                            width: 20
+                            height: 20
+                            flat: true
+                            onClicked: root.sidebarVisible = false
+
+                            background: Rectangle {
+                                radius: 4
+                                color: parent.hovered
+                                       ? (theme ? Qt.rgba(1,1,1,0.12) : "#eee")
+                                       : "transparent"
+                                Behavior on color { ColorAnimation { duration: 120 } }
+                            }
+
+                            contentItem: Icon {
+                                iconName: "corner-right"
+                                iconColor: theme ? theme.textColor : "#e0e0e0"
+                                size: 14
+                            }
                         }
 
                         Label {
@@ -79,7 +97,8 @@ Rectangle {
                         onClicked: chatBridge.refreshSessions()
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? (theme ? theme.navHoverBg : "#eee") : "transparent"
+                            color: parent.hovered ? (theme ? Qt.rgba(1,1,1,0.12) : "#eee") : "transparent"
+                            Behavior on color { ColorAnimation { duration: 120 } }
                         }
                         contentItem: Icon {
                             iconName: "refresh"
@@ -124,8 +143,9 @@ Rectangle {
                             anchors.fill: parent
                             radius: 6
                             color: hoverArea.containsMouse
-                                   ? (theme ? theme.navHoverBg : "#eee")
+                                   ? (theme ? Qt.rgba(1,1,1,0.10) : "#eee")
                                    : "transparent"
+                            Behavior on color { ColorAnimation { duration: 120 } }
                         }
 
                         RowLayout {
@@ -162,7 +182,10 @@ Rectangle {
                                 onClicked: root.deleteSession(modelData.filename)
                                 background: Rectangle {
                                     radius: 4
-                                    color: parent.hovered ? "#ff444422" : "transparent"
+                                    color: parent.hovered
+                                           ? (theme && theme.darkMode ? "#44ff4444" : "#ff444422")
+                                           : "transparent"
+                                    Behavior on color { ColorAnimation { duration: 120 } }
                                 }
                                 contentItem: Label {
                                     anchors.centerIn: parent
@@ -228,6 +251,9 @@ Rectangle {
                 width: parent.width
                 height: 48
                 color: theme ? theme.cardColor : "#2d2d2d"
+                radius: theme ? theme.cardRadius : 12
+                layer.enabled: true
+                layer.samples: 4
 
                 Rectangle {
                     anchors.bottom: parent.bottom
@@ -247,11 +273,13 @@ Rectangle {
                         width: 32
                         height: 32
                         flat: true
+                        visible: !root.sidebarVisible
                         onClicked: root.sidebarVisible = !root.sidebarVisible
 
                         background: Rectangle {
                             radius: 4
-                            color: parent.hovered ? (theme ? theme.navHoverBg : "#eee") : "transparent"
+                            color: parent.hovered ? (theme ? Qt.rgba(1,1,1,0.12) : "#eee") : "transparent"
+                            Behavior on color { ColorAnimation { duration: 120 } }
                         }
 
                         contentItem: Icon {

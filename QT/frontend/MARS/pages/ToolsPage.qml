@@ -62,12 +62,12 @@ Rectangle {
                     antialiasing: true
                 }
                 background: Rectangle {
-                    implicitWidth: 40
-                    implicitHeight: 22
-                    radius: 11
-                    border.width: parent.enabled && parent.hovered ? 1 : 0
-                    border.color: theme ? theme.accentColor : "#4a9eff"
-                    color: "transparent"
+                    implicitWidth: 48
+                    implicitHeight: 26
+                    radius: 13
+                    color: parent.enabled && parent.hovered
+                           ? (theme ? theme.hoverColor : "#e0e0ec") : "transparent"
+                    Behavior on color { ColorAnimation { duration: 120 } }
                 }
                 onClicked: {
                     for (var i = 0; i < root.tools.length; i++) {
@@ -96,12 +96,12 @@ Rectangle {
                     antialiasing: true
                 }
                 background: Rectangle {
-                    implicitWidth: 40
-                    implicitHeight: 22
-                    radius: 11
-                    border.width: parent.enabled && parent.hovered ? 1 : 0
-                    border.color: theme ? theme.accentColor : "#4a9eff"
-                    color: "transparent"
+                    implicitWidth: 48
+                    implicitHeight: 26
+                    radius: 13
+                    color: parent.enabled && parent.hovered
+                           ? (theme ? theme.hoverColor : "#e0e0ec") : "transparent"
+                    Behavior on color { ColorAnimation { duration: 120 } }
                 }
                 onClicked: {
                     for (var i = 0; i < root.tools.length; i++) {

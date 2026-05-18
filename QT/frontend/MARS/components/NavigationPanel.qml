@@ -21,6 +21,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: root.theme ? root.theme.navBg : "#252525"
+        radius: theme ? theme.cardRadius : 12
+        layer.enabled: true
+        layer.samples: 4
 
         ColumnLayout {
             anchors.fill: parent

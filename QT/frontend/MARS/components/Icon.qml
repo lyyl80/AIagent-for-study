@@ -81,8 +81,18 @@ Item {
     Item {
         anchors.centerIn: parent; width: size; height: size
         visible: iconName === "arrow-right"
-        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: -45; anchors.horizontalCenterOffset: size * 0.1 }
-        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: 45; anchors.horizontalCenterOffset: size * 0.1 }
+        Rectangle {
+            anchors.centerIn: parent
+            width: size * 0.45; height: size * 0.28; radius: size * 0.04
+            color: iconColor; rotation: -45
+            anchors.horizontalCenterOffset: size * 0.06
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            width: size * 0.45; height: size * 0.28; radius: size * 0.04
+            color: iconColor; rotation: 45
+            anchors.horizontalCenterOffset: size * 0.06
+        }
     }
 
     // Arrow Up — 简约 ^
