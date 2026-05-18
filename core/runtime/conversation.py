@@ -79,7 +79,9 @@ class ConversationRuntime:
     def run_turn(self, user_input: str, api_client, tool_executor,
                  on_text: Optional[Callable[[str], None]] = None,
                  on_tool: Optional[Callable[[str, Dict, str, bool], None]] = None,
-                 on_save: Optional[Callable[[str, str], None]] = None) -> TurnSummary:
+                 on_save: Optional[Callable[[str, str], None]] = None,
+                 on_think_begin: Optional[Callable[[], None]] = None,
+                 on_think_end: Optional[Callable[[], None]] = None) -> TurnSummary:
         self.messages.append(ConversationMessage.user_text(user_input))
         if on_save:
             on_save("user", user_input)
@@ -95,7 +97,11 @@ class ConversationRuntime:
                 ],
             )
 
+            if on_think_begin:
+                on_think_begin()
             blocks, usage = api_client.stream(request)
+            if on_think_end:
+                on_think_end()
             total_usage += usage
 
             msg = ConversationMessage.assistant(blocks, usage)

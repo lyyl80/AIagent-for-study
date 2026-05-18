@@ -1,6 +1,8 @@
 """AI Agent - 命令行界面"""
 import sys
 import os
+import time
+import threading
 from datetime import datetime
 
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +15,35 @@ from core.runtime.permissions import PermissionPolicy, PermissionMode
 from core.prompt.builder import SystemPromptBuilder
 from core.tools import call_tool
 from core.agent.memory import Memory
+
+
+class Spinner:
+    def __init__(self, message="Thinking"):
+        self.message = message
+        self._stop = threading.Event()
+        self._thread = None
+
+    def _spin(self):
+        chars = "|/-\\"
+        idx = 0
+        while not self._stop.is_set():
+            sys.stdout.write(f"\r{self.message} {chars[idx % len(chars)]}")
+            sys.stdout.flush()
+            time.sleep(0.1)
+            idx += 1
+
+    def start(self):
+        if self._thread is None or not self._thread.is_alive():
+            self._stop.clear()
+            self._thread = threading.Thread(target=self._spin, daemon=True)
+            self._thread.start()
+
+    def stop(self):
+        if self._thread and self._thread.is_alive():
+            self._stop.set()
+            self._thread.join()
+            sys.stdout.write("\r" + " " * (len(self.message) + 10) + "\r")
+            sys.stdout.flush()
 
 
 class ToolExecutor:
@@ -45,6 +76,9 @@ def run_interactive_mode(verbose=False):
     def save_msg(role, content, tool_name="", tool_args=""):
         if role == "user":
             memory.add_message("user", content)
+        elif role == "assistant":
+            text = content.text if hasattr(content, 'text') else str(content)
+            memory.add_message("assistant", text)
         elif role == "tool":
             memory.add_conversation({
                 "input": {"tool": tool_name, "tool_args": tool_args},
@@ -126,19 +160,25 @@ def run_interactive_mode(verbose=False):
                     print(f"加载失败: {e}")
                 continue
 
-            runtime.run_turn(
-                raw, client, ToolExecutor(),
-                on_text=lambda block: print(
-                    block.text if hasattr(block, 'text') else str(block),
-                    end="", flush=True
-                ),
-                on_tool=lambda name, args, result, failed: (
-                    print(f"\n[工具 {name}{' 失败' if failed else ''}] "
-                          f"{str(result)[:200]}"),
-                    save_msg("tool", str(result), name, str(args)),
-                ),
-                on_save=save_msg,
-            )
+            spinner = Spinner("Thinking")
+            try:
+                runtime.run_turn(
+                    raw, client, ToolExecutor(),
+                    on_text=lambda block: print(
+                        f"\nAI: {block.text if hasattr(block, 'text') else str(block)}",
+                        end="", flush=True
+                    ),
+                    on_tool=lambda name, args, result, failed: (
+                        print(f"\n[工具 {name}{' 失败' if failed else ''}] "
+                              f"{str(result)[:200]}"),
+                        save_msg("tool", str(result), name, str(args)),
+                    ),
+                    on_save=save_msg,
+                    on_think_begin=lambda: spinner.start(),
+                    on_think_end=lambda: spinner.stop(),
+                )
+            finally:
+                spinner.stop()
             print()
 
         except KeyboardInterrupt:
