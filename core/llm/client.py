@@ -154,12 +154,8 @@ class ApiClient:
                 if text:
                     msg_list.append({"role": "assistant", "content": text})
             elif m.role == MessageRole.TOOL:
-                # 工具结果：添加前缀标识并截断过长内容
                 for r in m.tool_results:
-                    content = r.content
-                    if len(content) > 2000:
-                        content = content[:1500] + f"\n... (剩余 {len(content)-1500} 字符)"
-                    msg_list.append({"role": "user", "content": f"工具 [{m.role.value}] 结果: {content}"})
+                    msg_list.append({"role": "user", "content": f"工具 [{m.role.value}] 结果: {r.content}"})
         return msg_list
 
     def _call_cloud(self, model_key: str, messages: List[Dict], system: str) -> str:
