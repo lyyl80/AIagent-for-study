@@ -80,7 +80,10 @@ class ApiClient:
                     msg_list.append({"role": "assistant", "content": text})
             elif m.role == MessageRole.TOOL:
                 for r in m.tool_results:
-                    msg_list.append({"role": "user", "content": f"工具 [{m.role.value}] 结果: {r.content}"})
+                    content = r.content
+                    if len(content) > 2000:
+                        content = content[:1500] + f"\n... (剩余 {len(content)-1500} 字符)"
+                    msg_list.append({"role": "user", "content": f"工具 [{m.role.value}] 结果: {content}"})
         return msg_list
 
     def _call_cloud(self, model_key: str, messages: List[Dict], system: str) -> str:
@@ -89,7 +92,7 @@ class ApiClient:
             raise Exception("未找到DEEPSEEK_API_KEY环境变量")
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
         full_messages = [{"role": "system", "content": system}] + messages
-        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True, max_tokens=8192)
+        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True, max_tokens=16384)
         full_content = ""
         for chunk in response:
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
@@ -99,7 +102,7 @@ class ApiClient:
     def _call_local(self, model_key: str, messages: List[Dict], system: str) -> str:
         full_messages = [{"role": "system", "content": system}] + messages
         try:
-            response = chat(model=model_key, messages=full_messages, stream=True, options={"num_predict": 8192})
+            response = chat(model=model_key, messages=full_messages, stream=True, options={"num_predict": 16384})
             full_content = ""
             for chunk in response:
                 content = chunk.get("message", {}).get("content", "")
@@ -115,7 +118,7 @@ class ApiClient:
         end_idx = text.rfind('}')
 
         if start_idx == -1:
-            return [TextBlock(text=text[:500])], TokenUsage()
+            return [TextBlock(text=text[:3000])], TokenUsage()
 
         if end_idx > start_idx:
             try:
@@ -143,8 +146,8 @@ class ApiClient:
             m = re.search(r'"' + key + r'"\s*:\s*"((?:[^"\\]|\\.)*)', text)
             if m:
                 extracted = m.group(1).replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                return [TextBlock(text=extracted[:500])], TokenUsage()
-        return [TextBlock(text=text[:500])], TokenUsage()
+                return [TextBlock(text=extracted[:4000])], TokenUsage()
+        return [TextBlock(text=text[:3000])], TokenUsage()
 
 
 class ModelManager:
