@@ -155,7 +155,8 @@ def write_file_tool(**kwargs) -> str:
                 shutil.copy2(file_path, bak)
 
         with open(file_path, mode, encoding='utf-8') as f:
-            f.write(content)
+            normalized = content.replace('\r\r\n', '\n').replace('\r\n', '\n')
+            f.write(normalized)
 
         size = os.path.getsize(file_path)
         return f"写入成功: {file_path} ({size} 字节)"
@@ -195,6 +196,9 @@ def replace_content_tool(**kwargs) -> str:
     use_regex = kwargs.get("regex", False)
     count = int(kwargs.get("count", 0) or 0)
 
+    # 标准化行尾（修复 \r\r\n 等异常换行符）
+    content = content.replace('\r\r\n', '\n').replace('\r\n', '\n')
+
     # 正则替换模式
     if use_regex:
         try:
@@ -202,7 +206,7 @@ def replace_content_tool(**kwargs) -> str:
         except re.error as e:
             return f"Error: 正则表达式无效: {e}"
     else:
-        # 精确匹配模式
+        old_val = old_val.replace('\r\r\n', '\n').replace('\r\n', '\n')
         if old_val not in content:
             return f"Error: 文件中未找到要替换的内容"
         if count > 1:
@@ -210,7 +214,7 @@ def replace_content_tool(**kwargs) -> str:
             n = min(count, content.count(old_val))
         else:
             new_content = content.replace(old_val, new_val, 1)
-            n = 1 if old_val in content else 0
+            n = 1
 
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -750,6 +754,7 @@ def python_exec_tool(**kwargs) -> str:
             "type": type, "isinstance": isinstance, "hasattr": hasattr,
             "getattr": getattr, "Exception": Exception, "ValueError": ValueError,
             "TypeError": TypeError, "KeyError": KeyError, "IndexError": IndexError,
+            "open": open, "__import__": __import__,
         },
         "os": os, "sys": sys, "re": re, "json": __import__('json'),
         "datetime": __import__('datetime'), "math": __import__('math'),

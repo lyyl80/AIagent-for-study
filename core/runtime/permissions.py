@@ -37,7 +37,6 @@ TOOL_PERMISSIONS = {
     "replace_content": PermissionMode.WORKSPACE_WRITE,  # 替换文件内容
     "talk": PermissionMode.READ_ONLY,            # 对话回复
     "finish": PermissionMode.READ_ONLY,          # 完成任务
-    "weather": PermissionMode.READ_ONLY,         # 天气查询
     "speaking": PermissionMode.READ_ONLY,        # 语音合成
 }
 

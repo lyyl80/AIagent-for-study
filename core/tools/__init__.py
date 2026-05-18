@@ -137,19 +137,7 @@ TOOL_DEFINITIONS = [
             "required": []
         }
     ),
-    ToolDefinition(
-        name="weather",
-        description="查询天气",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "city": {"type": "string", "description": "城市名称"},
-                "detail": {"type": "boolean", "description": "详细预报"},
-            },
-            "required": ["city"]
-        }
-    ),
-    ToolDefinition(
+ToolDefinition(
         name="speaking",
         description="文字转语音朗读",
         input_schema={
