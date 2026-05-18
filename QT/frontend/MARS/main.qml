@@ -3,12 +3,11 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import MARS 1.0
 
-
 Window {
     id: root
-    width:960
-    height:640
-    minimumWidth:800
+    width: 960
+    height: 640
+    minimumWidth: 800
     minimumHeight: 500
     visible: true
     title: "MARS AI AGENT"
@@ -26,18 +25,18 @@ Window {
     RowLayout {
         anchors.fill: parent
         spacing: 0
-       NavigationPanel{
-          id: navPanel
-          theme: root.theme
-          Layout.fillHeight: true
 
-          onItemClicked:function(index) {
-            pageStack.currentIndex = index
-            
-          }
-       }
-       
-       StackLayout {
+        NavigationPanel {
+            id: navPanel
+            theme: root.theme
+            Layout.fillHeight: true
+
+            onItemClicked: function(index) {
+                pageStack.currentIndex = index
+            }
+        }
+
+        StackLayout {
             id: pageStack
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -47,20 +46,21 @@ Window {
                 theme: root.theme
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                
+
                 onUserMessage: function(text) {
                     chatBridge.sendMessage(text)
                 }
-                
+
                 onLoadSession: function(filename) {
                     chatBridge.loadSession(filename)
                 }
-                
+
                 onNewSession: function() {
                     chatBridge.newSession()
                     chatPage.chatModel = []
                     chatBridge.refreshSessions()
                 }
+
                 onDeleteSession: function(filename) {
                     chatBridge.deleteSession(filename)
                 }
@@ -72,71 +72,63 @@ Window {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
             }
+
             SettingsPage {
                 id: settingsPage
                 theme: root.theme
                 Layout.fillWidth: true
                 Layout.fillHeight: true
             }
-             // 连接桥接信号
-           Connections {
+
+            Connections {
                 target: chatBridge
 
                 function onMessageReceived(sender, text) {
-                    // 检查是否是工具调用后的等待输入提示
                     if (sender === "ai" && text.includes("[等待用户输入...]")) {
-                        // 更新最后一条 AI 消息,添加等待输入标记
                         if (chatPage.chatModel.length > 0) {
                             var lastMsg = chatPage.chatModel[chatPage.chatModel.length - 1]
                             if (lastMsg.sender === "ai") {
                                 lastMsg.needInput = true
-                                chatPage.chatModel = chatPage.chatModel.slice() // 触发更新
+                                chatPage.chatModel = chatPage.chatModel.slice()
                                 return
                             }
                         }
                     }
-                    
-                    // 正常添加消息
-                    chatPage.chatModel = chatPage.chatModel.concat([
-                        { 
-                            sender: sender, 
-                            message: text,
-                            toolName: "",
-                            toolResult: "",
-                            needInput: false
-                        }
-                    ])
+
+                    chatPage.chatModel = chatPage.chatModel.concat([{
+                        sender: sender,
+                        message: text,
+                        toolName: "",
+                        toolResult: "",
+                        needInput: false
+                    }])
                 }
 
                 function onToolCalled(toolName, args, result) {
-                    chatPage.chatModel = chatPage.chatModel.concat([
-                        {
-                            sender: "ai",
-                            message: "",
-                            toolName: toolName,
-                            toolResult: result,
-                            needInput: false
-                        }
-                    ])
+                    chatPage.chatModel = chatPage.chatModel.concat([{
+                        sender: "ai",
+                        message: "",
+                        toolName: toolName,
+                        toolResult: result,
+                        needInput: false
+                    }])
                 }
 
-        function onErrorOccurred(message) {
-            chatPage.chatModel = chatPage.chatModel.concat([
-                { sender: "ai", message: "\u26A0\uFE0F " + message }
-            ])
-        }
+                function onErrorOccurred(message) {
+                    chatPage.chatModel = chatPage.chatModel.concat([{ sender: "ai", message: "\u26A0\uFE0F " + message }])
+                }
 
-        function onThinkingChanged(isThinking) {
-            chatPage.isThinking = isThinking
-        }
+                function onThinkingChanged(isThinking) {
+                    chatPage.isThinking = isThinking
+                }
 
-        function onSessionListUpdated(sessions) {
-            chatPage.sessionList = sessions
-        }
+                function onSessionListUpdated(sessions) {
+                    chatPage.sessionList = sessions
+                }
 
-        function onSessionLoaded(filename) {
-            chatPage.chatModel = []
-        }
+                function onSessionLoaded(filename) {
+                    chatPage.chatModel = []
+                }
             }
         }
     }

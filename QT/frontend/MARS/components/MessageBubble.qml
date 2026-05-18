@@ -1,24 +1,31 @@
 import QtQuick
 import QtQuick.Controls
 
-/**
- * MessageBubble - 消息气泡组件
- * 支持用户/AI 消息显示，以及工具调用结果展示
- */
 Rectangle {
     id: root
 
-    // ====== 自定义属性 ======
-    property var theme: null                    // 主题对象
-    property string sender: "user"              // 发送者：user（用户）/ ai（AI）
-    property string message: ""                 // 消息文本内容
-    property string toolName: ""                // 工具名称（可选，为空时不显示工具卡片）
-    property string toolResult: ""              // 工具执行结果（可选）
-    property bool needInput: false              // 是否需要用户输入
+    property var theme: null
+    property string sender: "user"
+    property string message: ""
+    property string toolName: ""
+    property string toolResult: ""
+    property bool needInput: false
 
     width: parent ? parent.width : 0
     implicitHeight: contentColumn.height + 8
     color: "transparent"
+
+    // 进入动画
+    property real opacityValue: 0
+    property real scaleValue: 0.95
+
+    Behavior on opacityValue { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+    Behavior on scaleValue { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+
+    Component.onCompleted: {
+        opacityValue = 1
+        scaleValue = 1
+    }
 
     Column {
         id: contentColumn
@@ -27,42 +34,43 @@ Rectangle {
         anchors.margins: 8
         y: 4
         spacing: 2
+        opacity: opacityValue
+        scale: scaleValue
+        transformOrigin: Item.Center
 
-        // ====== 消息气泡 ======
         Rectangle {
             id: bubble
             visible: root.toolName === "" || root.message !== ""
 
-            // 动态对齐：用户消息右对齐，AI 消息左对齐
             anchors.left: sender === "ai" ? parent.left : undefined
             anchors.right: sender === "user" ? parent.right : undefined
-            
-            // 宽度：根据文本长度自适应，最大不超过父容器的 75%
-            width: Math.min(innerText.implicitWidth + 32, parent.width * 0.75)
-            height: innerText.implicitHeight + 32  // 高度：文本高度 + 上下内边距 32px
-            radius: 12                          // 圆角半径 12px
-            
-            // 背景色：用户消息使用强调色，AI 消息使用浅色背景
-            color: sender === "user"
-                   ? (theme ? theme.userBubbleBg : "#f18cb9")     // 用户：粉色
-                   : (theme ? theme.aiBubbleBg : "#f0f0f0")       // AI：浅灰色
 
-            // 消息文本
+            width: Math.min(innerText.implicitWidth + 32, parent.width * 0.75)
+            height: innerText.implicitHeight + 32
+            radius: 12
+
+            color: sender === "user"
+                   ? (theme ? theme.userBubbleBg : "#7c3aed")
+                   : (theme ? theme.aiBubbleBg : "#3a3a3a")
+
             Label {
                 id: innerText
                 anchors.fill: parent
-                anchors.margins: 16             // 内边距 16px
-                
-                text: root.message              // 绑定消息内容
+                anchors.margins: 16
+
+                text: root.message
                 color: sender === "user"
-                       ? (theme ? theme.userBubbleText : "#fff")  // 用户：白色文字
-                       : (theme ? theme.aiBubbleText : "#333")    // AI：深色文字
-                font.pixelSize: 14              // 字体大小 14px
-                wrapMode: Text.Wrap             // 自动换行
+                       ? (theme ? theme.userBubbleText : "#fff")
+                       : (theme ? theme.aiBubbleText : "#e0e0e0")
+                font.pixelSize: 14
+                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                renderType: Text.NativeRendering
+                antialiasing: true
+                wrapMode: Text.Wrap
+                lineHeight: 1.5
             }
         }
 
-        // ====== 可折叠半透明工具面板 ======
         Rectangle {
             id: toolCard
             anchors.left: parent.left
@@ -145,14 +153,13 @@ Rectangle {
             }
         }
 
-        // ====== 等待用户输入提示 ======
         Rectangle {
             id: inputHint
             anchors.left: parent.left
             anchors.right: parent.right
-            visible: root.needInput             // 仅在需要输入时显示
-            radius: 6                           // 圆角半径 6px
-            color: theme ? theme.warningBg : "#fff3cd"  // 警告色背景
+            visible: root.needInput
+            radius: 6
+            color: theme ? theme.warningBg : "#fff3cd"
             border.color: theme ? theme.dividerColor : "#ffc107"
             border.width: 1
             height: visible ? hintInner.height + 16 : 0
@@ -166,7 +173,7 @@ Rectangle {
                 spacing: 6
 
                 Label {
-                    text: "\u23F3"  // ⏳ 沙漏图标
+                    text: "\u23F3"
                     font.pixelSize: 14
                     color: theme ? theme.textColor : "#856404"
                 }
@@ -180,15 +187,13 @@ Rectangle {
             }
         }
 
-        // ====== 发送者标签 ======
         Label {
-            // 动态对齐：与气泡保持一致
-            anchors.left: sender === "ai" ? bubble.left : undefined
-            anchors.right: sender === "user" ? bubble.right : undefined
-            
-            text: sender === "user" ? "你" : "MARS"  // 用户显示"你"，AI 显示"MARS"
-            font.pixelSize: 11                  // 字体大小 11px
-            color: theme ? theme.secondaryText : "#999"  // 次要文字颜色
+            anchors.left: sender === "ai" ? parent.left : undefined
+            anchors.right: sender === "user" ? parent.right : undefined
+
+            text: sender === "user" ? "你" : "MARS"
+            font.pixelSize: 11
+            color: theme ? theme.secondaryText : "#999"
         }
     }
 }
