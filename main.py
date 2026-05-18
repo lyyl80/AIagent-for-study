@@ -170,8 +170,7 @@ def run_interactive_mode(verbose=False):
                     ),
                     on_tool=lambda name, args, result, failed: (
                         print(f"\n[工具 {name}{' 失败' if failed else ''}] "
-                              f"{str(result)[:200]}"),
-                        save_msg("tool", str(result), name, str(args)),
+                              f"{str(result)[:200]}")
                     ),
                     on_save=save_msg,
                     on_think_begin=lambda: spinner.start(),

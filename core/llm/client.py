@@ -69,7 +69,13 @@ class ApiClient:
             if m.role == MessageRole.USER:
                 msg_list.append({"role": "user", "content": m.text_blocks[0] if m.text_blocks else ""})
             elif m.role == MessageRole.ASSISTANT:
-                text = "\n".join(b.text for b in m.blocks if isinstance(b, TextBlock) and b.text)
+                parts = []
+                for b in m.blocks:
+                    if isinstance(b, ToolUse):
+                        parts.append(f"[调用工具 {b.name}: {json.dumps(b.input, ensure_ascii=False)}]")
+                    elif isinstance(b, TextBlock) and b.text:
+                        parts.append(b.text)
+                text = "\n".join(parts)
                 if text:
                     msg_list.append({"role": "assistant", "content": text})
             elif m.role == MessageRole.TOOL:
