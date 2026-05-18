@@ -24,23 +24,48 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
 
-            Label {
-                text: "\u{1F527} 可用工具"
-                font.pixelSize: 20
-                font.bold: true
-                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                color: theme ? theme.textColor : "#333"
-                antialiasing: true
+            Rectangle {
                 Layout.fillWidth: true
-            }
+                height: 40
+                radius: 8
+                color: theme ? theme.cardColor : "#fff"
+                border.color: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.1) : "#ddd"
+                border.width: 1
 
-            Label {
-                text: "共 " + root.tools.length + " 个"
-                font.pixelSize: 12
-                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                color: theme ? theme.secondaryText : "#999"
-                antialiasing: true
-                Layout.alignment: Qt.AlignBottom
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: "tools-outline"
+                        iconColor: theme ? theme.textColor : "#333"
+                        size: 18
+                    }
+
+                    Label {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "工具"
+                        font.pixelSize: 14
+                        font.bold: true
+                        font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                        color: theme ? theme.textColor : "#333"
+                        antialiasing: true
+                    }
+                }
+
+                Label {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "共计 " + root.tools.length + " 个"
+                    font.pixelSize: 12
+                    font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                    color: theme ? theme.secondaryText : "#999"
+                    antialiasing: true
+                }
             }
 
             Button {
@@ -141,6 +166,7 @@ Rectangle {
                 height: grid.cardHeight
                 theme: root.theme
                 cardTitle: modelData.name
+                cardBorder: theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.08) : "#ddd"
                 opacity: toolSwitch.checked ? 1.0 : 0.55
 
                 Item {

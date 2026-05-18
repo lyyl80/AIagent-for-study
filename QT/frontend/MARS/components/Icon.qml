@@ -166,6 +166,29 @@ Item {
         Row { spacing: size * 0.12; Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } }
     }
 
+    // Tools Outline (工具轮廓) — 缺右上、左下的八边形
+    Item {
+        anchors.centerIn: parent; width: size; height: size
+        visible: iconName === "tools-outline"
+        readonly property real s: size
+        readonly property real c: s * 0.22
+        readonly property real t: s * 0.09
+        Rectangle { x: c; y: 0; width: s - 2*c; height: t; color: iconColor; radius: 1 }
+        Rectangle { x: c; y: s - t; width: s - 2*c; height: t; color: iconColor; radius: 1 }
+        Rectangle { x: 0; y: c; width: t; height: s - 2*c; color: iconColor; radius: 1 }
+        Rectangle { x: s - t; y: c; width: t; height: s - 2*c; color: iconColor; radius: 1 }
+        Rectangle {
+            x: c * 0.05; y: c * 0.05
+            width: c * 1.5; height: t
+            rotation: 45; color: iconColor; radius: 1
+        }
+        Rectangle {
+            x: s - c * 1.55; y: s - c * 1.55
+            width: c * 1.5; height: t
+            rotation: 45; color: iconColor; radius: 1
+        }
+    }
+
     // Settings (设置) — 简约齿轮
     Item {
         anchors.centerIn: parent; width: size; height: size

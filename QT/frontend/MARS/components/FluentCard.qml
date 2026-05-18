@@ -12,6 +12,7 @@ Item {
     property alias cardTitle: titleLabel.text  // 卡片标题（直接绑定到内部 Label）
     property bool elevated: true               // 是否显示阴影效果
     property var theme: null                   // 主题对象
+    property color cardBorder: "transparent"   // 卡片边框颜色
 
     default property alias content: contentArea.data  // 默认属性：允许子元素直接添加到内容区
 
@@ -36,6 +37,8 @@ Item {
         anchors.fill: parent                         // 填充整个组件
         radius: theme ? theme.cardRadius : 8         // 圆角半径：优先使用主题设置，默认 8px
         color: theme ? theme.cardColor : "#ffffff"   // 背景色：优先使用主题设置，默认白色
+        border.color: root.cardBorder
+        border.width: root.cardBorder === "transparent" ? 0 : 1
 
         // ====== 标题区域 ======
         Label {
