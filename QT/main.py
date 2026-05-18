@@ -22,38 +22,69 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from PySide6.QtGui import QGuiApplication, QFont
+from PySide6.QtGui import QFont, QIcon, QPixmap, QPainter, QColor
+from PySide6.QtCore import QUrl, Qt, QRect
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QUrl
+from PySide6.QtWidgets import QApplication, QSplashScreen
 from backend.chat_bridge import ChatBridge
 
+
+def make_splash_pixmap():
+    pm = QPixmap(80, 80)
+    pm.fill(QColor("#7c3aed"))
+    with QPainter(pm) as p:
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setBrush(QColor("#7c3aed"))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(0, 0, 80, 80, 18, 18)
+        p.setPen(QColor("#ffffff"))
+        f = QFont("Segoe UI", 42, QFont.Weight.Bold)
+        p.setFont(f)
+        p.drawText(QRect(0, 0, 80, 80), Qt.AlignmentFlag.AlignCenter, "M")
+    return pm
+
+
+def create_app_icon():
+    pm = QPixmap(64, 64)
+    pm.fill(Qt.GlobalColor.transparent)
+    with QPainter(pm) as p:
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setBrush(QColor("#7c3aed"))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(2, 2, 60, 60, 12, 12)
+        p.setPen(QColor("#ffffff"))
+        f = QFont("Segoe UI", 32, QFont.Weight.Bold)
+        p.setFont(f)
+        p.drawText(QRect(0, 0, 64, 64), Qt.AlignmentFlag.AlignCenter, "M")
+    return QIcon(pm)
+
+
 if __name__ == "__main__":
-    # 创建Qt应用程序实例
-    app = QGuiApplication(sys.argv)
+    app = QApplication(sys.argv)
     app.setApplicationName("MARS AI Agent")
     app.setOrganizationName("MARS")
-    
-    # 设置默认字体，Segoe UI + Segoe UI Variable 适合高DPI渲染
+    app.setWindowIcon(create_app_icon())
+
+    splash = QSplashScreen(make_splash_pixmap(), Qt.WindowType.WindowStaysOnTopHint)
+    splash.show()
+    app.processEvents()
+
     default_font = QFont("Segoe UI", 10)
     app.setFont(default_font)
 
-    # 创建QML应用程序引擎
     engine = QQmlApplicationEngine()
-    
-    # 创建聊天桥接器并注册到QML上下文
+
     bridge = ChatBridge()
     engine.rootContext().setContextProperty("chatBridge", bridge)
-    
-    # 添加前端模块导入路径
+
     engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
 
-    # 加载主QML文件
     qml_path = os.path.join(os.path.dirname(__file__), "frontend", "MARS", "main.qml")
     engine.load(QUrl.fromLocalFile(qml_path))
 
-    # 检查是否成功加载根对象
     if not engine.rootObjects():
+        splash.close()
         sys.exit(-1)
 
-    # 进入Qt事件循环
+    splash.close()
     sys.exit(app.exec())

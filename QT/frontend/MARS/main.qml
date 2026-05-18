@@ -10,7 +10,8 @@ Window {
     minimumWidth: 800
     minimumHeight: 500
     visible: true
-    title: "MARS AI AGENT"
+    title: ""
+    flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint
     readonly property var theme: FluentTheme {}
     color: theme.bgColor
 

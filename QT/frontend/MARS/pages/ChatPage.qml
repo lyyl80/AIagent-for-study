@@ -252,16 +252,7 @@ Rectangle {
                 height: 48
                 color: theme ? theme.cardColor : "#2d2d2d"
                 radius: theme ? theme.cardRadius : 12
-                layer.enabled: true
-                layer.samples: 4
-
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 1
-                    color: theme ? theme.dividerColor : "#3d3d3d"
-                }
+                clip: true
 
                 Row {
                     anchors.left: parent.left
@@ -291,7 +282,7 @@ Rectangle {
 
                     Label {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "MARS AI 助手"
+                        text: "MARS mini"
                         font.pixelSize: 16
                         font.bold: true
                         color: theme ? theme.textColor : "#333"
