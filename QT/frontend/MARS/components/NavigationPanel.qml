@@ -154,7 +154,6 @@ Item {
                     text: modelData.label
                     font.pixelSize: 9
                     font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                    renderType: Text.NativeRendering
                     antialiasing: true
                     color: isActive
                            ? (theme && theme.darkMode ? "#ffffff" : "#7c3aed")

@@ -206,7 +206,6 @@ Rectangle {
                             font.pixelSize: 13
                             font.bold: true
                             font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                            renderType: Text.NativeRendering
                             antialiasing: true
                         }
                     }

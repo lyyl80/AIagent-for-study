@@ -24,13 +24,17 @@ Rectangle {
             text: "\u{1F527} 可用工具"
             font.pixelSize: 20
             font.bold: true
+            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
             color: theme ? theme.textColor : "#333"
+            antialiasing: true
         }
 
         Label {
             text: "共 " + root.tools.length + " 个工具"
             font.pixelSize: 12
+            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
             color: theme ? theme.secondaryText : "#999"
+            antialiasing: true
         }
 
         GridView {
@@ -88,11 +92,13 @@ Rectangle {
                             width: parent.width
                             text: modelData.description
                             font.pixelSize: 12
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
                             color: theme ? theme.secondaryText : "#666"
                             wrapMode: Text.Wrap
                             lineHeight: 1.4
                             maximumLineCount: 3
                             elide: Text.ElideRight
+                            antialiasing: true
                         }
 
                         Item { height: 4; width: 1 }
@@ -112,7 +118,9 @@ Rectangle {
                                     anchors.centerIn: parent
                                     text: modelData.required_params
                                     font.pixelSize: 11
+                                    font.family: theme ? theme.defaultFontFamily : "Segoe UI"
                                     color: "#cc3333"
+                                    antialiasing: true
                                 }
                             }
                         }
@@ -132,7 +140,9 @@ Rectangle {
                                     anchors.centerIn: parent
                                     text: modelData.optional_params
                                     font.pixelSize: 11
+                                    font.family: theme ? theme.defaultFontFamily : "Segoe UI"
                                     color: theme ? theme.secondaryText : "#888"
+                                    antialiasing: true
                                 }
                             }
                         }

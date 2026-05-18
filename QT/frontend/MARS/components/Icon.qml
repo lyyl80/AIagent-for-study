@@ -54,267 +54,99 @@ Item {
         visible: iconName === "square-outline"
     }
     
-    // Plus
+    // Plus — 简约 + 号
     Item {
         anchors.centerIn: parent
-        width: size
-        height: size
-        visible: iconName === "plus" || iconName === "plus-outline"
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: iconName === "plus" ? size * 0.6 : size * 0.7
-            height: 2
-            color: iconName === "plus" ? iconColor : "transparent"
-            border.color: iconName === "plus-outline" ? iconColor : "transparent"
-            border.width: iconName === "plus-outline" ? 2 : 0
-        }
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: 2
-            height: iconName === "plus" ? size * 0.6 : size * 0.7
-            color: iconName === "plus" ? iconColor : "transparent"
-            border.color: iconName === "plus-outline" ? iconColor : "transparent"
-            border.width: iconName === "plus-outline" ? 2 : 0
-        }
+        width: size; height: size
+        visible: iconName === "plus"
+        Rectangle { anchors.centerIn: parent; width: size * 0.5; height: 2; color: iconColor; radius: 1 }
+        Rectangle { anchors.centerIn: parent; width: 2; height: size * 0.5; color: iconColor; radius: 1 }
     }
-    
-    // Minus
-    Rectangle {
-        anchors.centerIn: parent
-        width: size * 0.6
-        height: 2
-        color: iconColor
-        visible: iconName === "minus"
-    }
-    
+
+    // Minus — 简约 - 号
+    Rectangle { anchors.centerIn: parent; width: size * 0.5; height: 2; color: iconColor; radius: 1; visible: iconName === "minus" }
+
     // Line
-    Rectangle {
-        anchors.centerIn: parent
-        width: size * 0.7
-        height: 3
-        color: iconColor
-        visible: iconName === "line"
-    }
-    
-    // Cross
+    Rectangle { anchors.centerIn: parent; width: size * 0.5; height: 2; color: iconColor; radius: 1; visible: iconName === "line" }
+
+    // Cross — 简约 ×
     Item {
-        anchors.centerIn: parent
-        width: size
-        height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "cross"
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: size * 0.6
-            height: 2
-            color: iconColor
-            rotation: 45
-        }
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: size * 0.6
-            height: 2
-            color: iconColor
-            rotation: -45
-        }
+        Rectangle { anchors.centerIn: parent; width: size * 0.5; height: 2; color: iconColor; radius: 1; rotation: 45 }
+        Rectangle { anchors.centerIn: parent; width: size * 0.5; height: 2; color: iconColor; radius: 1; rotation: -45 }
     }
     
-    // Arrow Right
+    // Arrow Right — 简约 >
     Item {
-        anchors.centerIn: parent
-        width: size
-        height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "arrow-right"
-        
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: size * 0.15
-            width: size * 0.5
-            height: 3
-            color: iconColor
-        }
-        
-        // Arrow head top
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: size * 0.15
-            width: size * 0.25
-            height: 3
-            color: iconColor
-            rotation: -45
-            anchors.topMargin: -size * 0.08
-        }
-        
-        // Arrow head bottom
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: size * 0.15
-            width: size * 0.25
-            height: 3
-            color: iconColor
-            rotation: 45
-            anchors.bottomMargin: -size * 0.08
-        }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: -45; anchors.horizontalCenterOffset: size * 0.1 }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: 45; anchors.horizontalCenterOffset: size * 0.1 }
     }
-    
-    // Arrow Up
+
+    // Arrow Up — 简约 ^
     Item {
-        anchors.centerIn: parent
-        width: size
-        height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "arrow-up"
-        
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: size * 0.15
-            width: 3
-            height: size * 0.5
-            color: iconColor
-        }
-        
-        // Arrow head left
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: size * 0.15
-            width: 3
-            height: size * 0.25
-            color: iconColor
-            rotation: 45
-            anchors.leftMargin: -size * 0.08
-        }
-        
-        // Arrow head right
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            anchors.topMargin: size * 0.15
-            width: 3
-            height: size * 0.25
-            color: iconColor
-            rotation: -45
-            anchors.rightMargin: -size * 0.08
-        }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: 45; anchors.verticalCenterOffset: size * 0.1 }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: -45; anchors.verticalCenterOffset: size * 0.1 }
     }
-    
-    // Arrow Left
+
+    // Arrow Left — 简约 <
     Item {
-        anchors.centerIn: parent
-        width: size
-        height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "arrow-left"
-        
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: size * 0.15
-            width: size * 0.5
-            height: 2
-            color: iconColor
-        }
-        
-        // Arrow head using Rectangle
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: size * 0.1
-            width: size * 0.15
-            height: size * 0.25
-            color: iconColor
-            rotation: -45
-        }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: 45; anchors.horizontalCenterOffset: -size * 0.1 }
+        Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: -45; anchors.horizontalCenterOffset: -size * 0.1 }
     }
-    
-    // Hamburger Menu
+
+    // Hamburger Menu — 三条横线
     Column {
         anchors.centerIn: parent
-        spacing: 4
+        spacing: 3
         visible: iconName === "hamburger"
-        
-        Rectangle {
-            width: size * 0.7
-            height: 2
-            color: iconColor
-        }
-        Rectangle {
-            width: size * 0.7
-            height: 2
-            color: iconColor
-        }
-        Rectangle {
-            width: size * 0.7
-            height: 2
-            color: iconColor
-        }
+        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
+        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
+        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
     }
-    
-    // Corner Right
+
+    // Corner Right — 简约 > 箭头
     Item {
         anchors.centerIn: parent
-        width: size
-        height: size
+        width: size; height: size
         visible: iconName === "corner-right"
-        
         Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.leftMargin: size * 0.2
-            width: 2
-            height: size * 0.5
-            color: iconColor
+            anchors.centerIn: parent
+            width: size * 0.4; height: 2; color: iconColor; radius: 1
+            rotation: -45; anchors.horizontalCenterOffset: size * 0.1
         }
-        
         Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: size * 0.25
-            anchors.left: parent.left
-            width: size * 0.5
-            height: 2
-            color: iconColor
-        }
-        
-        // Corner arrow
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: size * 0.25
-            anchors.left: parent.left
-            anchors.leftMargin: size * 0.5
-            width: size * 0.15
-            height: size * 0.15
-            color: iconColor
-            rotation: -45
+            anchors.centerIn: parent
+            width: size * 0.4; height: 2; color: iconColor; radius: 1
+            rotation: 45; anchors.horizontalCenterOffset: size * 0.1
         }
     }
-    
-    // Refresh
+
+    // Refresh — 圆形箭头
     Item {
         anchors.centerIn: parent
-        width: size
-        height: size
+        width: size; height: size
         visible: iconName === "refresh"
-        
         Rectangle {
-            anchors.fill: parent
-            color: "transparent"
-            border.color: iconColor
-            border.width: 2
-            radius: width / 2
+            anchors.centerIn: parent
+            width: size * 0.6; height: size * 0.6; radius: size * 0.3
+            color: "transparent"; border.color: iconColor; border.width: 2
         }
-        
         Rectangle {
-            anchors.top: parent.top
-            anchors.left: parent.left
-            width: size * 0.15
-            height: 2
-            color: iconColor
-            rotation: -45
+            anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter
+            width: 2; height: size * 0.35; color: iconColor
+            anchors.topMargin: size * 0.05
+        }
+        Rectangle {
+            anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter
+            width: 2; height: size * 0.22; color: iconColor; rotation: 45
+            anchors.topMargin: size * 0.02
         }
     }
     

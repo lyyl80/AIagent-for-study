@@ -11,62 +11,70 @@ Rectangle {
 
     height: theme ? theme.inputBarHeight : 56
     width: parent ? parent.width : 0
-    color: theme ? theme.cardColor : "#2d2d2d"
+    color: "transparent"
 
     Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 1
-        color: theme ? theme.dividerColor : "#3d3d3d"
-    }
-
-    TextArea {
-        id: inputField
         anchors.fill: parent
-        anchors.margins: 8
+        anchors.topMargin: 8
+        anchors.leftMargin: 8
+        anchors.rightMargin: 8
+        anchors.bottomMargin: 8
+        radius: 10
+        color: theme ? theme.cardColor : "#2d2d2d"
+        border.color: theme ? theme.dividerColor : "#3d3d3d"
+        border.width: 1
+        clip: true
 
-        placeholderText: root.isThinking ? "AI 正在思考，请稍等..." : "输入消息,Enter to send"
-        placeholderTextColor: theme ? theme.secondaryText : "#909090"
-        color: theme ? theme.textColor : "#e0e0e0"
-        font.pixelSize: 14
-        enabled: !root.isThinking
-        wrapMode: Text.Wrap
+        TextArea {
+            id: inputField
+            anchors.fill: parent
+            anchors.rightMargin: 48
+            anchors.margins: 8
 
-        Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Return && !(event.modifiers & Qt.ShiftModifier)) {
-                event.accepted = true
-                doSend()
+            placeholderText: root.isThinking ? "AI 正在思考，请稍等..." : "输入消息,Enter to send"
+            placeholderTextColor: theme ? theme.secondaryText : "#909090"
+            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+            color: theme ? theme.textColor : "#e0e0e0"
+            font.pixelSize: 14
+            enabled: !root.isThinking
+            wrapMode: Text.Wrap
+            background: null
+
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Return && !(event.modifiers & Qt.ShiftModifier)) {
+                    event.accepted = true
+                    doSend()
+                }
             }
         }
-    }
 
-    Button {
-        id: sendBtn
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
-        anchors.rightMargin: 8
-        width: 40
-        height: 40
-        enabled: !root.isThinking
+        Button {
+            id: sendBtn
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right
+            anchors.rightMargin: 4
+            width: 36
+            height: 36
+            enabled: !root.isThinking
 
-        background: Rectangle {
-            radius: 8
-            color: parent.enabled
-                   ? (parent.hovered
-                      ? Qt.lighter(theme ? theme.accentColor : "#7c3aed", 1.1)
-                      : (theme ? theme.accentColor : "#7c3aed"))
-                   : (theme ? theme.dividerColor : "#555555")
-            Behavior on color { ColorAnimation { duration: 100 } }
+            background: Rectangle {
+                radius: 8
+                color: parent.enabled
+                       ? (parent.hovered
+                          ? Qt.lighter(theme ? theme.accentColor : "#7c3aed", 1.1)
+                          : (theme ? theme.accentColor : "#7c3aed"))
+                       : (theme ? theme.dividerColor : "#555555")
+                Behavior on color { ColorAnimation { duration: 100 } }
+            }
+
+            contentItem: Icon {
+                iconName: root.isThinking ? "refresh" : "arrow-right"
+                iconColor: "#ffffff"
+                size: 16
+            }
+
+            onClicked: doSend()
         }
-
-        contentItem: Icon {
-            iconName: root.isThinking ? "refresh" : "arrow-right"
-            iconColor: "#ffffff"
-            size: 16
-        }
-
-        onClicked: doSend()
     }
 
     function doSend() {

@@ -4,7 +4,7 @@ QtObject {
     id: theme
 
     // 字体设置
-    readonly property string defaultFontFamily: "Segoe UI, PingFang SC, Microsoft YaHei, sans-serif"
+    readonly property string defaultFontFamily: "Segoe UI"
 
     // ====== 亮/暗模式切换开关 ======
     property bool darkMode: true

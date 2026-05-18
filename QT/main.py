@@ -11,6 +11,9 @@ Qt GUI应用程序入口
 import sys
 import os
 
+# 高DPI支持（使QML字体在Windows上保持清晰）
+os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
+
 # 设置Qt Quick Controls样式为Basic（简洁风格）
 os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 
@@ -30,8 +33,8 @@ if __name__ == "__main__":
     app.setApplicationName("MARS AI Agent")
     app.setOrganizationName("MARS")
     
-    # 设置默认字体为Segoe UI，避免Windows上Fixedsys字体加载警告
-    default_font = QFont("Segoe UI", 9)
+    # 设置默认字体，Segoe UI + Segoe UI Variable 适合高DPI渲染
+    default_font = QFont("Segoe UI", 10)
     app.setFont(default_font)
 
     # 创建QML应用程序引擎

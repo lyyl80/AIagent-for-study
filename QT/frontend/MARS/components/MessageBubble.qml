@@ -64,7 +64,6 @@ Rectangle {
                        : (theme ? theme.aiBubbleText : "#e0e0e0")
                 font.pixelSize: 14
                 font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-                renderType: Text.NativeRendering
                 antialiasing: true
                 wrapMode: Text.Wrap
                 lineHeight: 1.5

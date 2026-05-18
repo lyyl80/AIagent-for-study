@@ -48,7 +48,9 @@ Item {
             
             font.pixelSize: 14                       // 字体大小 14px
             font.bold: true                          // 粗体显示
+            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
             color: theme ? theme.textColor : "#333"  // 文字颜色：优先使用主题设置
+            antialiasing: true
         }
 
         // ====== 内容区域（留给调用方填充）======
