@@ -1,7 +1,20 @@
+"""
+工具注册表模块
+
+统一管理所有可用工具的注册、定义和调用。提供：
+- TOOL_FUNCTIONS: 工具名称到函数的映射
+- TOOL_DEFINITIONS: 工具的元数据描述（用于LLM理解）
+- TOOL_REGISTRY: 向后兼容的注册表格式
+- call_tool: 统一的工具调用入口
+- 辅助函数：获取描述、Schema、列表等
+
+支持参数别名自动转换，提高容错性。
+"""
 from typing import Dict, Any, Callable, Tuple, Optional
 from core.runtime.types import ToolDefinition
 from .tools import *
 
+# 工具名称到函数的映射表
 TOOL_FUNCTIONS: Dict[str, Callable] = {
     "read_file": read_file_tool,
     "write_file": write_file_tool,
@@ -22,6 +35,7 @@ TOOL_FUNCTIONS: Dict[str, Callable] = {
     "python_exec": python_exec_tool,
 }
 
+# 工具定义列表 - 包含名称、描述和JSON Schema
 TOOL_DEFINITIONS = [
     ToolDefinition(
         name="read_file",
@@ -239,7 +253,8 @@ TOOL_DEFINITIONS = [
     ),
 ]
 
-# Backward-compatible registry
+# 向后兼容的注册表格式
+# ToolEntry = (函数, 描述, Schema字典)
 ToolEntry = Tuple[Callable, str, Optional[Dict[str, Any]]]
 TOOL_REGISTRY: Dict[str, ToolEntry] = {}
 for td in TOOL_DEFINITIONS:
@@ -255,12 +270,28 @@ for td in TOOL_DEFINITIONS:
 
 
 def call_tool(tool_name: str, **kwargs) -> Any:
+    """
+    统一调用工具的入口函数
+    
+    验证工具存在性和必需参数，支持参数别名自动转换。
+    
+    Args:
+        tool_name (str): 工具名称
+        **kwargs: 工具参数
+        
+    Returns:
+        Any: 工具执行结果
+        
+    Raises:
+        ValueError: 当工具不存在或缺少必需参数时
+    """
     if tool_name not in TOOL_REGISTRY:
         raise ValueError(f"工具 '{tool_name}' 未在注册表中找到。")
 
     tool_func, _, schema = TOOL_REGISTRY[tool_name]
     if schema:
         required = schema.get("required_params", [])
+        # 参数别名映射表
         aliases = {
             "file_path": ["path"],
             "message": ["content", "text"],
@@ -270,6 +301,7 @@ def call_tool(tool_name: str, **kwargs) -> Any:
         for param in required:
             if param not in kwargs:
                 found = False
+                # 尝试查找别名
                 for alt in aliases.get(param, []):
                     if alt in kwargs:
                         kwargs[param] = kwargs.pop(alt)
@@ -281,12 +313,27 @@ def call_tool(tool_name: str, **kwargs) -> Any:
 
 
 def get_tool_description() -> str:
+    """
+    获取所有工具的简要描述文本
+    
+    Returns:
+        str: 每行一个工具的"名称: 描述"格式
+    """
     return "\n".join(
         f"{td.name}: {td.description}" for td in TOOL_DEFINITIONS
     )
 
 
 def get_tool_schema(tool_name: str) -> Optional[Dict[str, Any]]:
+    """
+    获取指定工具的JSON Schema
+    
+    Args:
+        tool_name (str): 工具名称
+        
+    Returns:
+        Optional[Dict]: 工具的input_schema，未找到返回None
+    """
     for td in TOOL_DEFINITIONS:
         if td.name == tool_name:
             return td.input_schema
@@ -294,4 +341,10 @@ def get_tool_schema(tool_name: str) -> Optional[Dict[str, Any]]:
 
 
 def list_tools() -> list:
+    """
+    获取所有工具名称列表
+    
+    Returns:
+        list: 工具名称字符串列表
+    """
     return [td.name for td in TOOL_DEFINITIONS]

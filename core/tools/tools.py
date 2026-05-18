@@ -1,3 +1,15 @@
+"""
+工具函数模块
+
+提供AI代理可调用的各种实用工具，包括：
+- 文件操作（读取、写入、替换、搜索）
+- 目录管理（列出、创建、删除、复制/移动）
+- Shell命令执行
+- 网络请求（搜索、网页抓取）
+- 实用功能（天气查询、语音合成、Python代码执行）
+
+所有工具通过**kwargs接收参数，返回字符串格式的结果。
+"""
 import subprocess
 import sys
 import os
@@ -18,7 +30,17 @@ except ImportError:
 
 
 def _auto_encode(file_path: str) -> str:
-    """自动检测文件编码并读取"""
+    """
+    自动检测文件编码并读取内容
+    
+    使用chardet库检测文件编码，支持多种编码格式（UTF-8、GBK等）。
+    
+    Args:
+        file_path (str): 文件路径
+        
+    Returns:
+        str: 解码后的文件内容，解码失败时使用replace策略
+    """
     with open(file_path, 'rb') as f:
         raw = f.read()
     if not raw:
@@ -33,7 +55,22 @@ def _auto_encode(file_path: str) -> str:
 # ============================================================
 
 def read_file_tool(**kwargs) -> str:
-    """读取文件内容"""
+    """
+    读取文件内容
+    
+    支持按行号范围读取、关键词搜索、大文件截断等功能。
+    自动检测文件编码，限制最大文件大小为5MB。
+    
+    Args:
+        file_path/path (str): 文件路径
+        search (str, optional): 搜索关键词，返回包含该词的行
+        start_line (int, optional): 起始行号，默认1
+        end_line (int, optional): 结束行号
+        max_lines (int, optional): 最大返回行数，默认500
+        
+    Returns:
+        str: 文件内容或搜索结果，错误时返回错误信息
+    """
     file_path = kwargs.get("file_path") or kwargs.get("path")
     if not file_path:
         return "Error: 缺少参数 file_path"
@@ -41,12 +78,14 @@ def read_file_tool(**kwargs) -> str:
         return f"Error: 文件不存在: {file_path}"
 
     try:
+        # 检查文件大小限制
         if os.path.getsize(file_path) > 5 * 1024 * 1024:
             return f"Error: 文件过大 ({os.path.getsize(file_path) // 1024}KB)，超过 5MB 限制"
 
         content = _auto_encode(file_path)
         lines = content.splitlines(keepends=True)
 
+        # 关键词搜索模式
         if "search" in kwargs:
             found = []
             for i, li in enumerate(lines, 1):
@@ -54,6 +93,7 @@ def read_file_tool(**kwargs) -> str:
                     found.append(f"L{i}: {li.rstrip()}")
             return "\n".join(found) if found else f"未找到: '{kwargs['search']}'"
 
+        # 按行号范围读取
         start = int(kwargs.get("start_line", 1))
         end = kwargs.get("end_line")
         if end is not None:
@@ -62,9 +102,11 @@ def read_file_tool(**kwargs) -> str:
                 return f"Error: 行号无效，文件共 {len(lines)} 行"
             return "".join(lines[start - 1:end])
 
+        # 从指定行读到末尾
         if start > 1:
             return "".join(lines[start - 1:])
 
+        # 限制返回行数
         max_lines = kwargs.get("max_lines", 500)
         if isinstance(max_lines, str):
             max_lines = int(max_lines)
@@ -77,7 +119,20 @@ def read_file_tool(**kwargs) -> str:
 
 
 def write_file_tool(**kwargs) -> str:
-    """写入文件内容"""
+    """
+    写入文件内容
+    
+    支持追加模式和备份功能。自动创建父目录。
+    
+    Args:
+        file_path/path (str): 文件路径
+        content (str): 要写入的内容
+        append (bool, optional): 是否追加模式，默认False（覆盖）
+        backup (bool, optional): 覆盖前是否创建.bak备份文件
+        
+    Returns:
+        str: 成功消息或错误信息
+    """
     file_path = kwargs.get("file_path") or kwargs.get("path")
     content = kwargs.get("content")
     if not file_path:
@@ -86,12 +141,15 @@ def write_file_tool(**kwargs) -> str:
         return "Error: 缺少参数 content"
 
     try:
+        # 确保父目录存在
         os.makedirs(os.path.dirname(os.path.abspath(file_path)) or ".", exist_ok=True)
 
+        # 选择写入模式
         if kwargs.get("append"):
             mode = 'a'
         else:
             mode = 'w'
+            # 创建备份
             if kwargs.get("backup") and os.path.isfile(file_path):
                 bak = file_path + ".bak"
                 shutil.copy2(file_path, bak)
@@ -106,7 +164,21 @@ def write_file_tool(**kwargs) -> str:
 
 
 def replace_content_tool(**kwargs) -> str:
-    """替换文件内容（支持精确匹配、正则、计数）"""
+    """
+    替换文件内容
+    
+    支持精确匹配和正则表达式替换，可控制替换次数。
+    
+    Args:
+        file_path/path (str): 文件路径
+        old_content (str): 要替换的旧内容或正则表达式
+        new_content (str): 新内容
+        regex (bool, optional): 是否使用正则表达式，默认False
+        count (int, optional): 最大替换次数，0表示全部替换
+        
+    Returns:
+        str: 替换结果统计或错误信息
+    """
     file_path = kwargs.get("file_path") or kwargs.get("path")
     old_val = kwargs.get("old_content", "")
     new_val = kwargs.get("new_content", "")
@@ -123,12 +195,14 @@ def replace_content_tool(**kwargs) -> str:
     use_regex = kwargs.get("regex", False)
     count = int(kwargs.get("count", 0) or 0)
 
+    # 正则替换模式
     if use_regex:
         try:
             new_content, n = re.subn(old_val, new_val, content, count=count if count > 0 else 0)
         except re.error as e:
             return f"Error: 正则表达式无效: {e}"
     else:
+        # 精确匹配模式
         if old_val not in content:
             return f"Error: 文件中未找到要替换的内容"
         if count > 1:
@@ -151,7 +225,20 @@ def replace_content_tool(**kwargs) -> str:
 # ============================================================
 
 def list_directory(**kwargs) -> str:
-    """列出目录内容（含文件大小、修改时间、类型）"""
+    """
+    列出目录内容
+    
+    显示文件名、大小、修改时间和类型（文件/目录）。
+    支持隐藏文件过滤、正则匹配、递归列出等功能。
+    
+    Args:
+        path (str): 目录路径，默认当前目录
+        all (bool, optional): 是否显示隐藏文件（以.开头），默认False
+        pattern (str, optional): 文件名正则过滤模式
+        
+    Returns:
+        str: 格式化的目录列表或错误信息
+    """
     path = kwargs.get("path", ".")
     if not os.path.isdir(path):
         return f"Error: 目录不存在: {path}"
@@ -169,6 +256,7 @@ def list_directory(**kwargs) -> str:
             full = os.path.join(path, name)
             st = os.stat(full)
             size = st.st_size
+            # 格式化文件大小
             if size >= 1024 * 1024:
                 size_str = f"{size / (1024 * 1024):.1f}M"
             elif size >= 1024:
@@ -180,6 +268,7 @@ def list_directory(**kwargs) -> str:
             kind = "[DIR]" if os.path.isdir(full) else "[FILE]"
             entries.append(f"{kind} {name}  {size_str}  {mtime}")
 
+        # 排序：目录在前，然后按名称字母序
         entries.sort(key=lambda e: ("[DIR]" not in e, e.lower()))
         header = f"[目录] {os.path.abspath(path)} ({len(entries)} 项)"
         return header + "\n" + "\n".join(entries) if entries else header + "\n  (空)"
@@ -188,7 +277,17 @@ def list_directory(**kwargs) -> str:
 
 
 def create_directory(**kwargs) -> str:
-    """创建目录"""
+    """
+    创建目录
+    
+    递归创建所有父目录，如果已存在则不报错。
+    
+    Args:
+        path (str): 要创建的目录路径
+        
+    Returns:
+        str: 成功消息或错误信息
+    """
     path = kwargs.get("path", "")
     if not path:
         return "Error: 缺少参数 path"
@@ -200,7 +299,18 @@ def create_directory(**kwargs) -> str:
 
 
 def delete_path(**kwargs) -> str:
-    """删除文件或目录"""
+    """
+    删除文件或目录
+    
+    删除目录时需要显式设置recursive=true以防止误删。
+    
+    Args:
+        path (str): 要删除的路径
+        recursive (bool, optional): 是否递归删除非空目录
+        
+    Returns:
+        str: 删除结果或错误信息
+    """
     path = kwargs.get("path", "")
     if not path:
         return "Error: 缺少参数 path"
@@ -220,7 +330,19 @@ def delete_path(**kwargs) -> str:
 
 
 def copy_move(**kwargs) -> str:
-    """复制或移动文件/目录"""
+    """
+    复制或移动文件/目录
+    
+    自动创建目标路径的父目录，支持跨设备移动。
+    
+    Args:
+        src (str): 源路径
+        dst (str): 目标路径
+        action (str, optional): 操作类型，"copy"或"move"，默认"copy"
+        
+    Returns:
+        str: 操作结果或错误信息
+    """
     src = kwargs.get("src", "")
     dst = kwargs.get("dst", "")
     action = kwargs.get("action", "copy")
@@ -245,7 +367,22 @@ def copy_move(**kwargs) -> str:
 
 
 def grep_files(**kwargs) -> str:
-    """在文件中搜索正则表达式"""
+    """
+    在文件中搜索正则表达式
+    
+    递归搜索目录，支持文件类型过滤、大小限制、忽略大小写等选项。
+    
+    Args:
+        pattern (str): 正则表达式模式
+        path (str, optional): 搜索路径，默认当前目录
+        include (str, optional): 文件名通配符模式，默认"*"
+        exclude (str, optional): 排除的文件名模式
+        ignore_case (bool, optional): 是否忽略大小写，默认True
+        max_results (int, optional): 最大返回结果数，默认50
+        
+    Returns:
+        str: 匹配的行列列表或错误信息
+    """
     pattern = kwargs.get("pattern", "")
     path_spec = kwargs.get("path", ".")
     if not pattern:
@@ -262,6 +399,7 @@ def grep_files(**kwargs) -> str:
     exclude = kwargs.get("exclude")
     ignore_case = kwargs.get("ignore_case", True)
 
+    # 编译正则（可选忽略大小写）
     if ignore_case and not (pattern.startswith('(?') and pattern.endswith(')')):
         compiled = re.compile(pattern, re.IGNORECASE)
 
@@ -270,12 +408,14 @@ def grep_files(**kwargs) -> str:
     if not search_path.exists():
         return f"Error: 路径不存在: {path_spec}"
 
+    # 递归查找文件
     files = search_path.rglob(include) if search_path.is_dir() else [search_path]
     for fp in files:
         if not fp.is_file():
             continue
         if exclude and fnmatch.fnmatch(fp.name, exclude):
             continue
+        # 跳过大于2MB的文件
         if fp.stat().st_size > 2 * 1024 * 1024:
             continue
         try:
@@ -296,7 +436,17 @@ def grep_files(**kwargs) -> str:
 
 
 def file_info(**kwargs) -> str:
-    """获取文件/目录详细信息"""
+    """
+    获取文件/目录详细信息
+    
+    包括名称、路径、类型、大小、权限、MD5哈希值、时间戳等。
+    
+    Args:
+        path (str): 文件或目录路径
+        
+    Returns:
+        str: 格式化的文件信息或错误信息
+    """
     path = kwargs.get("path", "")
     if not path or not os.path.exists(path):
         return f"Error: 路径不存在: {path}"
@@ -310,6 +460,7 @@ def file_info(**kwargs) -> str:
             "大小": f"{st.st_size:,} 字节",
             "权限": oct(st.st_mode)[-3:],
         }
+        # 计算文件MD5（仅对小文件）
         if os.path.isfile(path):
             with open(path, 'rb') as f:
                 info["MD5"] = hashlib.md5(f.read(65536)).hexdigest() if st.st_size < 10 * 1024 * 1024 else "(文件过大，跳过)"
@@ -326,7 +477,21 @@ def file_info(**kwargs) -> str:
 # ============================================================
 
 def run_shell(**kwargs) -> str:
-    """执行 Shell 命令 (Windows PowerShell)"""
+    """
+    执行 Shell 命令
+    
+    Windows下使用PowerShell，其他系统使用默认shell。
+    支持超时控制、工作目录设置、stdin输入。
+    
+    Args:
+        command (str): 要执行的命令
+        timeout (int, optional): 超时秒数，默认60
+        cwd (str, optional): 工作目录
+        input (str, optional): stdin输入内容
+        
+    Returns:
+        str: 命令输出或错误信息
+    """
     command = kwargs.get("command", "")
     if not command:
         return "Error: 缺少参数 command"
@@ -336,6 +501,7 @@ def run_shell(**kwargs) -> str:
     input_str = kwargs.get("input")  # stdin
 
     try:
+        # 根据操作系统选择shell
         if platform.system() == "Windows":
             proc = subprocess.Popen(
                 ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
@@ -360,6 +526,7 @@ def run_shell(**kwargs) -> str:
         if proc.returncode != 0:
             return f"退出码 {proc.returncode}: {err or out}"[:3000]
 
+        # 截断过长输出
         if len(out) > 8000:
             out = out[:7000] + f"\n... (共 {len(out)} 字符，已截断)"
 
@@ -382,7 +549,17 @@ _WEB_HEADERS = {
 
 
 def web_search_tool(**kwargs) -> str:
-    """Bing 搜索"""
+    """
+    Bing搜索引擎查询
+    
+    解析搜索结果页面，提取标题、链接和摘要。
+    
+    Args:
+        query (str): 搜索关键词
+        
+    Returns:
+        str: 格式化的搜索结果列表或错误信息
+    """
     query = kwargs.get("query", "")
     if not query:
         return "Error: 缺少参数 query"
@@ -394,6 +571,7 @@ def web_search_tool(**kwargs) -> str:
         soup = BeautifulSoup(resp.text, "html.parser")
         results = []
 
+        # 提取标准搜索结果
         for li in soup.select("li.b_algo"):
             a = li.find("a", href=True)
             h2 = li.find("h2")
@@ -405,6 +583,7 @@ def web_search_tool(**kwargs) -> str:
                 if title and not link.startswith("javascript:"):
                     results.append(f"{len(results) + 1}. {title}\n   {link}\n   {desc}")
 
+        # 降级：尝试其他选择器
         if not results:
             for a_el in soup.select("h2 a, .b_title a"):
                 href = a_el.get("href", "")
@@ -423,7 +602,18 @@ def web_search_tool(**kwargs) -> str:
 
 
 def web_content_tool(**kwargs) -> str:
-    """获取网页纯文本内容"""
+    """
+    获取网页纯文本内容
+    
+    移除脚本、样式、导航等无关元素，提取主要内容区域。
+    支持多个URL批量处理。
+    
+    Args:
+        urls (Union[str, List[str]]): URL或URL列表
+        
+    Returns:
+        str: 提取的网页文本内容，每个URL用分隔线分开
+    """
     urls = kwargs.get("urls")
     if isinstance(urls, str):
         urls = [urls]
@@ -439,10 +629,12 @@ def web_content_tool(**kwargs) -> str:
                 resp.encoding = resp.apparent_encoding
 
             soup = BeautifulSoup(resp.text, "html.parser")
+            # 移除无关标签
             for tag in soup(["script", "style", "nav", "footer", "header", "aside",
                              "noscript", "iframe", "form"]):
                 tag.decompose()
 
+            # 优先提取主要内容区域
             main = (soup.select_one("main, article, .content, #content, .post, .article, [role='main']")
                     or soup.body or soup)
             text = main.get_text(separator="\n")
@@ -469,16 +661,49 @@ def web_content_tool(**kwargs) -> str:
 # ============================================================
 
 def talk_tool(**kwargs) -> str:
+    """
+    对话工具 - 返回用户消息
+    
+    用于Agent直接回复用户，不进行工具调用。
+    
+    Args:
+        message/content/text (str): 要回复的消息
+        
+    Returns:
+        str: 消息内容
+    """
     message = kwargs.get("message") or kwargs.get("content") or kwargs.get("text", "")
     return message or "(空消息)"
 
 
 def finish_tool(**kwargs) -> str:
+    """
+    完成任务工具
+    
+    标记任务已完成，返回最终结果。
+    
+    Args:
+        response (str): 任务完成时的响应消息
+        
+    Returns:
+        str: 完成消息，默认"任务完成"
+    """
     return kwargs.get("response", "任务完成")
 
 
 def weather_tool(**kwargs) -> str:
-    """天气查询 (wttr.in)"""
+    """
+    天气查询工具
+    
+    使用wttr.in免费API获取天气信息。
+    
+    Args:
+        city (str): 城市名称
+        detail (bool, optional): 是否返回详细信息，默认False
+        
+    Returns:
+        str: 格式化的天气信息或错误提示
+    """
     city = kwargs.get("city", "")
     if not city:
         return "Error: 缺少参数 city"
@@ -497,7 +722,19 @@ def weather_tool(**kwargs) -> str:
 
 
 def speaking_tool(**kwargs) -> str:
-    """文字转语音"""
+    """
+    文字转语音工具
+    
+    使用pyttsx3库进行本地TTS合成并播放。
+    
+    Args:
+        text (str): 要朗读的文本
+        rate (int, optional): 语速，默认150
+        volume (float, optional): 音量（0.0-1.0），默认1.0
+        
+    Returns:
+        str: 执行结果或错误信息
+    """
     if pyttsx3 is None:
         return "Error: pyttsx3 未安装"
 
@@ -516,11 +753,23 @@ def speaking_tool(**kwargs) -> str:
 
 
 def python_exec_tool(**kwargs) -> str:
-    """执行 Python 代码片段（隔离环境）"""
+    """
+    执行 Python 代码片段
+    
+    在隔离的安全环境中执行代码，限制可用的内置函数和模块。
+    捕获stdout输出作为返回值。
+    
+    Args:
+        code (str): 要执行的Python代码
+        
+    Returns:
+        str: 代码的输出结果或错误信息
+    """
     code = kwargs.get("code", "")
     if not code:
         return "Error: 缺少参数 code"
 
+    # 定义安全的命名空间，限制可用功能
     safe_globals = {
         "__builtins__": {
             "print": print, "len": len, "range": range, "int": int, "float": float,
@@ -539,6 +788,7 @@ def python_exec_tool(**kwargs) -> str:
 
     import io as _io
     try:
+        # 重定向stdout以捕获输出
         old_stdout = sys.stdout
         captured = _io.StringIO()
         sys.stdout = captured

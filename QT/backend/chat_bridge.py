@@ -1,3 +1,15 @@
+"""
+聊天桥接器模块 - Qt后端核心
+
+作为QML前端与Python后端的通信桥梁，提供：
+- 消息发送和接收
+- 工具调用执行
+- 会话管理（新建、加载、删除）
+- 模型切换
+- 工具信息查询
+
+使用Qt信号槽机制实现异步通信，避免阻塞UI线程。
+"""
 import os
 import sys
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -12,15 +24,41 @@ from core.config.settings import Debugmode
 
 
 class ChatBridge(QObject):
+    """
+    聊天桥接器类
+    
+    连接QML界面和AI代理核心逻辑，管理会话状态和工作线程。
+    通过Qt属性系统和信号槽实现双向数据绑定。
+    
+    Signals:
+        messageReceived (str, str): 收到新消息时发射，参数(role, content)
+        toolCalled (str, str, str): 工具被调用时发射，参数(name, args, result)
+        thinkingChanged (bool): 思考状态变化时发射
+        errorOccurred (str): 发生错误时发射
+        sessionListUpdated (list): 会话列表更新时发射
+        sessionLoaded (str): 会话加载完成时发射
+        
+    Attributes:
+        _current_memory (Memory): 当前会话的记忆对象
+        _is_thinking (bool): 是否正在处理中
+        _worker (ChatWorker): 后台工作线程
+    """
+    
     # ====== 向 QML 发射的信号 ======
-    messageReceived = Signal(str, str)
-    toolCalled = Signal(str, str, str)
-    thinkingChanged = Signal(bool)
-    errorOccurred = Signal(str)
-    sessionListUpdated = Signal(list)
-    sessionLoaded = Signal(str)
+    messageReceived = Signal(str, str)      # 消息接收信号
+    toolCalled = Signal(str, str, str)      # 工具调用信号
+    thinkingChanged = Signal(bool)          # 思考状态变化信号
+    errorOccurred = Signal(str)             # 错误信号
+    sessionListUpdated = Signal(list)       # 会话列表更新信号
+    sessionLoaded = Signal(str)             # 会话加载信号
 
     def __init__(self, parent=None):
+        """
+        初始化桥接器
+        
+        Args:
+            parent: Qt父对象
+        """
         super().__init__(parent)
         self._current_memory = Memory()
         self._is_thinking = False
@@ -29,10 +67,22 @@ class ChatBridge(QObject):
     # ====== isThinking 属性 ======
     @Property(bool, notify=thinkingChanged)
     def isThinking(self):
+        """
+        获取思考状态
+        
+        Returns:
+            bool: 是否正在处理任务
+        """
         return self._is_thinking
 
     @isThinking.setter
     def isThinking(self, value):
+        """
+        设置思考状态并发射通知信号
+        
+        Args:
+            value (bool): 新的思考状态
+        """
         if self._is_thinking != value:
             self._is_thinking = value
             self.thinkingChanged.emit(value)
@@ -40,6 +90,15 @@ class ChatBridge(QObject):
     # ====== QML 调用的插槽 ======
     @Slot(str)
     def sendMessage(self, text):
+        """
+        发送用户消息并启动AI处理
+        
+        创建后台工作线程处理消息，连接所有信号处理器。
+        如果已有任务在运行，则拒绝新请求。
+        
+        Args:
+            text (str): 用户输入的文本
+        """
         if self._worker and self._worker.isRunning():
             self.errorOccurred.emit("请等待当前任务完成")
             return
@@ -48,6 +107,7 @@ class ChatBridge(QObject):
         self._current_memory.add_message("user", text)
         self.messageReceived.emit("user", text)
 
+        # 创建并启动工作线程
         self._worker = ChatWorker(text, api_client=ApiClient(), memory=self._current_memory)
         self._worker.textChunk.connect(self._on_text_chunk)
         self._worker.toolInvoked.connect(self._on_tool_invoked)
@@ -57,21 +117,49 @@ class ChatBridge(QObject):
         self._worker.start()
 
     def _on_text_chunk(self, chunk):
+        """
+        处理文本块回调
+        
+        Args:
+            chunk (str): AI生成的文本片段
+        """
         self.messageReceived.emit("ai", chunk)
 
     def _on_tool_invoked(self, tool_name, args, result):
+        """
+        处理工具调用回调
+        
+        Args:
+            tool_name (str): 工具名称
+            args (str): 工具参数字符串
+            result (str): 工具执行结果
+        """
         self.toolCalled.emit(tool_name, args, result)
 
     def _on_step_completed(self, current, total):
+        """
+        处理步骤完成回调（当前未使用）
+        
+        Args:
+            current (int): 当前步骤数
+            total (int): 总步骤数
+        """
         pass
 
     def _on_worker_finished(self):
+        """处理工作线程正常结束"""
         self.isThinking = False
         if self._worker:
             self._worker.wait(3000)
             self._worker = None
 
     def _on_worker_error(self, msg):
+        """
+        处理工作线程错误
+        
+        Args:
+            msg (str): 错误消息
+        """
         self.errorOccurred.emit(msg)
         self.isThinking = False
         if self._worker:
@@ -80,16 +168,24 @@ class ChatBridge(QObject):
 
     @Slot()
     def newSession(self):
+        """创建新的空白会话"""
         self._current_memory = Memory()
         self._current_memory.save()
         
 
     @Slot()
     def clearHistory(self):
+        """清空当前会话历史"""
         self._current_memory.clear()
 
     @Slot(str)
     def loadSession(self, filename):
+        """
+        加载指定会话文件
+        
+        Args:
+            filename (str): 会话文件名（不含扩展名）
+        """
         try:
             self._current_memory = Memory.load_session(filename)
             self.sessionLoaded.emit(filename)
@@ -98,7 +194,12 @@ class ChatBridge(QObject):
             self.errorOccurred.emit(f"加载会话失败: {e}")
 
     def _rebuild_chat(self):
-        """从 Memory 重建聊天消息到 QML（按 history 时间顺序）"""
+        """
+        从Memory历史记录重建聊天界面
+        
+        遍历memory.history，按时间顺序发射消息和工具调用信号到QML。
+        跳过纯用户消息（已在UI中显示）。
+        """
         for entry in self._current_memory.history:
             if "input" in entry:
                 tool = entry.get("input", {}).get("tool", "")
@@ -106,7 +207,7 @@ class ChatBridge(QObject):
                 if tool in ("talk", "finish"):
                     self.messageReceived.emit("ai", output)
                 elif tool == "user":
-                    pass
+                    pass  # 用户消息不需要重复显示
                 else:
                     args = entry.get("input", {}).get("tool_args", {})
                     self.toolCalled.emit(tool, str(args), output)
@@ -120,6 +221,12 @@ class ChatBridge(QObject):
 
     @Slot(str)
     def deleteSession(self, filename):
+        """
+        删除指定会话文件
+        
+        Args:
+            filename (str): 要删除的会话文件名
+        """
         import os as _os
         session_path = _os.path.join("session", filename + ".json")
         if _os.path.exists(session_path):
@@ -128,24 +235,51 @@ class ChatBridge(QObject):
 
     @Slot()
     def refreshSessions(self):
+        """刷新会话列表并发射更新信号"""
         sessions = Memory.list_sessions()
         self.sessionListUpdated.emit(sessions)
 
     @Slot(result=str)
     def getToolDescriptions(self):
+        """
+        获取所有工具的详细描述文本
+        
+        Returns:
+            str: 格式化的工具描述
+        """
         return get_tool_description()
 
     @Slot(result=list)
     def getToolNames(self):
+        """
+        获取所有工具名称列表
+        
+        Returns:
+            list: 工具名称字符串列表
+        """
         return list_tools()
 
     @Slot(result=list)
     def getModelOptions(self):
+        """
+        获取可用模型选项列表
+        
+        Returns:
+            list: 包含label、key、category的字典列表
+        """
         opts = ModelManager().get_model_options()
         return [{"label": k, "key": v["key"], "category": v["category"]} for k, v in opts.items()]
 
     @Slot(result=list)
     def getTools(self):
+        """
+        获取工具详细信息列表（用于UI展示）
+        
+        过滤掉内部工具（talk、finish），提取必需和可选参数。
+        
+        Returns:
+            list: 包含name、description、required_params、optional_params的字典列表
+        """
         from core.tools import TOOL_DEFINITIONS
         result = []
         for td in TOOL_DEFINITIONS:
@@ -163,6 +297,16 @@ class ChatBridge(QObject):
 
     @Slot(str, str, result=str)
     def callToolDirectly(self, tool_name, args_json):
+        """
+        直接调用工具（用于测试或调试）
+        
+        Args:
+            tool_name (str): 工具名称
+            args_json (str): JSON格式的参数
+            
+        Returns:
+            str: 工具执行结果或错误信息
+        """
         import json
         try:
             args = json.loads(args_json) if args_json else {}
@@ -172,16 +316,32 @@ class ChatBridge(QObject):
             return f"调用失败: {e}"
         
     @Slot(str)
-    def switchModel(self, model): 
+    def switchModel(self, model):
+        """
+        切换当前使用的LLM模型
+        
+        Args:
+            model (str): 模型标识符
+        """ 
         ApiClient.active_model = model
 
     @Slot(str, str)
     def addCustomModel(self, key, name):
+        """
+        添加自定义模型
+        
+        Args:
+            key (str): 模型标识符
+            name (str): 模型显示名称
+        """
         ModelManager().add_custom_model(key, name)
 
     @Slot(str)
     def removeCustomModel(self, key):
-        ModelManager().remove_custom_model(key)
+        """
+        移除自定义模型
         
-
-  
+        Args:
+            key (str): 要移除的模型标识符
+        """
+        ModelManager().remove_custom_model(key)
