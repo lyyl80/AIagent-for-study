@@ -101,98 +101,70 @@ Item {
         Rectangle { anchors.centerIn: parent; width: size * 0.4; height: 2; color: iconColor; radius: 1; rotation: -45; anchors.horizontalCenterOffset: -size * 0.1 }
     }
 
-    // Hamburger Menu — 三条横线
+    // Hamburger Menu — 简约菜单
     Column {
         anchors.centerIn: parent
         spacing: 3
         visible: iconName === "hamburger"
-        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
-        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
-        Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
+        Rectangle { width: size * 0.55; height: 2; color: iconColor; radius: 1 }
+        Rectangle { width: size * 0.55; height: 2; color: iconColor; radius: 1 }
+        Rectangle { width: size * 0.55; height: 2; color: iconColor; radius: 1 }
     }
 
-    // Corner Right — 简约 > 箭头
+    // Corner Right — 会话列表 (三条递减横线)
     Item {
-        anchors.centerIn: parent
-        width: size; height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "corner-right"
-        Rectangle {
-            anchors.centerIn: parent
-            width: size * 0.4; height: 2; color: iconColor; radius: 1
-            rotation: -45; anchors.horizontalCenterOffset: size * 0.1
-        }
-        Rectangle {
-            anchors.centerIn: parent
-            width: size * 0.4; height: 2; color: iconColor; radius: 1
-            rotation: 45; anchors.horizontalCenterOffset: size * 0.1
+        Column {
+            anchors.centerIn: parent; spacing: 3
+            Rectangle { width: size * 0.6; height: 2; color: iconColor; radius: 1 }
+            Rectangle { width: size * 0.45; height: 2; color: iconColor; radius: 1 }
+            Rectangle { width: size * 0.3; height: 2; color: iconColor; radius: 1 }
         }
     }
 
-    // Refresh — 圆形箭头
+    // Refresh — 循环箭头
     Item {
-        anchors.centerIn: parent
-        width: size; height: size
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "refresh"
         Rectangle {
             anchors.centerIn: parent
-            width: size * 0.6; height: size * 0.6; radius: size * 0.3
+            width: size * 0.65; height: size * 0.65; radius: size * 0.325
             color: "transparent"; border.color: iconColor; border.width: 2
         }
         Rectangle {
-            anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter
-            width: 2; height: size * 0.35; color: iconColor
-            anchors.topMargin: size * 0.05
-        }
-        Rectangle {
-            anchors.top: parent.top; anchors.horizontalCenter: parent.horizontalCenter
-            width: 2; height: size * 0.22; color: iconColor; rotation: 45
-            anchors.topMargin: size * 0.02
+            anchors.top: parent.top; anchors.right: parent.right
+            width: 2; height: size * 0.32; color: iconColor
+            anchors.topMargin: size * 0.04; anchors.rightMargin: size * 0.02
+            rotation: -45
         }
     }
     
-    // Chat (会话)
-    Rectangle {
-        anchors.centerIn: parent
-        width: size * 0.6
-        height: size * 0.6
-        visible: iconName === "chat"
-        
-        color: "transparent"
-        border.color: iconColor
-        border.width: 2
-        radius: width * 0.2
-    }
-    
-    // Tools (工具)
-    Rectangle {
-        anchors.centerIn: parent
-        width: size * 0.6
-        height: size * 0.6
-        visible: iconName === "tools"
-        
-        color: iconColor
-        radius: width * 0.15
-    }
-    
-    // Settings (设置)
+    // Chat (会话) — 简约对话气泡
     Item {
-        anchors.centerIn: parent
-        width: size
-        height: size
+        anchors.centerIn: parent; width: size * 0.7; height: size * 0.6
+        visible: iconName === "chat"
+        Rectangle { anchors.fill: parent; radius: width * 0.25; color: "transparent"; border.color: iconColor; border.width: 2 }
+        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; width: size * 0.15; height: 2; color: iconColor; rotation: -45; anchors.leftMargin: size * 0.05 }
+    }
+
+    // Tools (工具) — 简约网格
+    Column {
+        anchors.centerIn: parent; spacing: size * 0.12
+        visible: iconName === "tools"
+        Row { spacing: size * 0.12; Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } }
+        Row { spacing: size * 0.12; Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } Rectangle { width: size * 0.2; height: size * 0.2; radius: size * 0.05; color: iconColor } }
+    }
+
+    // Settings (设置) — 简约齿轮
+    Item {
+        anchors.centerIn: parent; width: size; height: size
         visible: iconName === "settings"
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: size * 0.5
-            height: 2
-            color: iconColor
-        }
-        
-        Rectangle {
-            anchors.centerIn: parent
-            width: 2
-            height: size * 0.5
-            color: iconColor
-        }
+        Rectangle { anchors.centerIn: parent; width: size * 0.44; height: size * 0.44; radius: size * 0.22; color: "transparent"; border.color: iconColor; border.width: 2 }
+        Rectangle { anchors.centerIn: parent; width: size * 0.18; height: size * 0.18; radius: size * 0.09; color: iconColor }
+        Rectangle { anchors.centerIn: parent; width: 2; height: size * 0.7; color: iconColor; rotation: 0 }
+        Rectangle { anchors.centerIn: parent; width: 2; height: size * 0.7; color: iconColor; rotation: 45 }
+        Rectangle { anchors.centerIn: parent; width: 2; height: size * 0.7; color: iconColor; rotation: -45 }
+        Rectangle { anchors.centerIn: parent; width: 2; height: size * 0.7; color: iconColor; rotation: 90 }
     }
 }

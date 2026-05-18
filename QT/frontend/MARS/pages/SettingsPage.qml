@@ -96,12 +96,18 @@ Rectangle {
                         }
                         background: Rectangle {
                             radius: 6
-                            color: parent.enabled ? (theme ? theme.accentColor : "#f18cb9") : "#ccc"
+                            color: {
+                                if (!parent.enabled) return theme ? theme.dividerColor : "#555"
+                                if (parent.hovered) return Qt.lighter(theme ? theme.accentColor : "#7c3aed", 1.15)
+                                return theme ? theme.accentColor : "#7c3aed"
+                            }
+                            Behavior on color { ColorAnimation { duration: 120 } }
                         }
                         contentItem: Label {
                             anchors.centerIn: parent
                             text: parent.text
                             font.pixelSize: 13
+                            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
                             color: "#fff"
                         }
                     }
