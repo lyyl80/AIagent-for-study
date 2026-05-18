@@ -74,7 +74,7 @@ class SystemPromptBuilder:
         self._sections.append("2. 使用 tools 中提供的工具，参数必须准确")
         self._sections.append("3. 每次操作后验证结果，失败则分析原因调整策略")
         self._sections.append("4. 连续3次不同策略均失败 → 使用 finish")
-        self._sections.append("5. 信息不足时用 talk 主动询问")
+        self._sections.append("5. 信息不足时用 talk 主动询问，绝不输出空工具名")
         self._sections.append("6. 绝不伪造运行结果，不假设未验证的文件内容")
 
     def _add_tool_usage(self):

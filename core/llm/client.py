@@ -150,14 +150,7 @@ class ApiClient:
                 # 用户消息：直接提取文本
                 msg_list.append({"role": "user", "content": m.text_blocks[0] if m.text_blocks else ""})
             elif m.role == MessageRole.ASSISTANT:
-                # 助手消息：合并文本块和工具调用信息
-                parts = []
-                for b in m.blocks:
-                    if isinstance(b, ToolUse):
-                        parts.append(f"[调用工具 {b.name}: {json.dumps(b.input, ensure_ascii=False)}]")
-                    elif isinstance(b, TextBlock) and b.text:
-                        parts.append(b.text)
-                text = "\n".join(parts)
+                text = "\n".join(b.text for b in m.blocks if isinstance(b, TextBlock) and b.text)
                 if text:
                     msg_list.append({"role": "assistant", "content": text})
             elif m.role == MessageRole.TOOL:
@@ -265,6 +258,15 @@ class ApiClient:
                 action = data.get("action", data)
                 tool_name = action.get("tool", "")
                 tool_args = action.get("tool_args", {})
+
+                # 空工具名 → 降级为 talk，避免调用错误工具
+                if not tool_name:
+                    raw_msg = (tool_args.get("message") or tool_args.get("content")
+                               or tool_args.get("response") or tool_args.get("text")
+                               or text[:1000])
+                    return [TextBlock(text=raw_msg)], TokenUsage(
+                        input_tokens=len(raw_text) // 2,
+                        output_tokens=max(1, len(raw_text) // 4))
 
                 blocks: List[ContentBlock] = []
                 # 特殊处理对话和完成工具
