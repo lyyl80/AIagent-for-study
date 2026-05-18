@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional, List, Set, Tuple, Callable
 from dataclasses import dataclass, field
+import ast
 import time
 
 from core.runtime.types import (
@@ -10,6 +11,56 @@ from core.runtime.types import (
 from core.runtime.usage import UsageTracker
 from core.runtime.permissions import PermissionPolicy
 from core.runtime.compact import SessionCompactor
+
+
+def _safe_parse_args(args_raw):
+    if isinstance(args_raw, dict):
+        return args_raw
+    try:
+        return ast.literal_eval(args_raw)
+    except (ValueError, SyntaxError):
+        return {}
+
+
+def memory_to_runtime_messages(history: list) -> List[ConversationMessage]:
+    """将 Memory.history 转换为 ConversationMessage 列表（保持时间顺序）"""
+    messages: List[ConversationMessage] = []
+    for entry in history:
+        if "input" in entry:
+            tool = entry["input"].get("tool", "")
+            args_raw = entry["input"].get("tool_args", {})
+            output = entry.get("output", "")
+            is_error = entry.get("failed", False) or (
+                isinstance(output, str) and output.startswith("Error:")
+            )
+
+            if tool in ("talk", "finish"):
+                messages.append(ConversationMessage.assistant([
+                    TextBlock(text=output)
+                ]))
+            elif tool == "user":
+                args = _safe_parse_args(args_raw)
+                msg = args.get("message", output) if isinstance(args, dict) else str(args_raw)
+                messages.append(ConversationMessage.user_text(msg or output))
+            else:
+                args = _safe_parse_args(args_raw)
+                tool_id = f"tu_{hash(str(args_raw))}_p{len(messages)}"
+                messages.append(ConversationMessage.assistant([
+                    ToolUse(id=tool_id, name=tool, input=args)
+                ]))
+                messages.append(ConversationMessage.tool_result(
+                    tool_id, output, is_error=is_error
+                ))
+        else:
+            role = entry.get("role", "")
+            content = entry.get("content", "")
+            if role == "user":
+                messages.append(ConversationMessage.user_text(content))
+            elif role == "assistant":
+                messages.append(ConversationMessage.assistant([
+                    TextBlock(text=content)
+                ]))
+    return messages
 
 
 @dataclass
@@ -55,6 +106,8 @@ class ConversationRuntime:
                 for block in msg.text_blocks:
                     if block and on_text:
                         on_text(block)
+                    if on_save:
+                        on_save("assistant", block)
                 return TurnSummary(usage=total_usage, iterations=iteration, finished=True)
 
             for tool_use in tool_uses:

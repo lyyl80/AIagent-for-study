@@ -7,7 +7,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QFont
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtCore import QUrl
 from backend.chat_bridge import ChatBridge
@@ -16,6 +16,10 @@ if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     app.setApplicationName("MARS AI Agent")
     app.setOrganizationName("MARS")
+    
+    # 设置默认字体，避免 Fixedsys 字体加载错误
+    default_font = QFont("Segoe UI", 9)
+    app.setFont(default_font)
 
     # 创建引擎对象
     engine = QQmlApplicationEngine()

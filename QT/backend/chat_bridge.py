@@ -98,19 +98,25 @@ class ChatBridge(QObject):
             self.errorOccurred.emit(f"加载会话失败: {e}")
 
     def _rebuild_chat(self):
-        """从 Memory 重建聊天消息到 QML"""
-        for msg in self._current_memory.messages:
-            if msg.get("role") == "user":
-                self.messageReceived.emit("user", msg.get("content", ""))
+        """从 Memory 重建聊天消息到 QML（按 history 时间顺序）"""
         for entry in self._current_memory.history:
             if "input" in entry:
                 tool = entry.get("input", {}).get("tool", "")
-                output = entry.get("output", "")
+                output = entry.get("output_summary") or entry.get("output", "")
                 if tool in ("talk", "finish"):
                     self.messageReceived.emit("ai", output)
+                elif tool == "user":
+                    pass
                 else:
                     args = entry.get("input", {}).get("tool_args", {})
                     self.toolCalled.emit(tool, str(args), output)
+            else:
+                role = entry.get("role", "")
+                content = entry.get("content", "")
+                if role == "user":
+                    self.messageReceived.emit("user", content)
+                elif role == "assistant":
+                    self.messageReceived.emit("ai", content)
 
     @Slot(str)
     def deleteSession(self, filename):

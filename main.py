@@ -8,8 +8,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from core.llm.client import ApiClient
-from core.runtime.conversation import ConversationRuntime
-from core.runtime.types import ConversationMessage, TextBlock
+from core.runtime.conversation import ConversationRuntime, memory_to_runtime_messages
 from core.runtime.permissions import PermissionPolicy, PermissionMode
 from core.prompt.builder import SystemPromptBuilder
 from core.tools import call_tool
@@ -121,25 +120,7 @@ def run_interactive_mode(verbose=False):
                 try:
                     memory = Memory.load_session(filename)
                     runtime = _new_runtime()
-                    for msg in memory.messages:
-                        if msg.get("role") == "user":
-                            runtime.messages.append(
-                                ConversationMessage.user_text(msg.get("content", ""))
-                            )
-                    for entry in memory.history:
-                        inp = entry.get("input", {})
-                        tool = inp.get("tool", "")
-                        out = entry.get("output", "")
-                        if tool in ("talk", "finish"):
-                            runtime.messages.append(
-                                ConversationMessage.assistant([TextBlock(text=out)])
-                            )
-                        elif tool == "user":
-                            runtime.messages.append(
-                                ConversationMessage.user_text(
-                                    inp.get("tool_args", {}).get("message", "")
-                                )
-                            )
+                    runtime.messages = memory_to_runtime_messages(memory.history)
                     print(f"已加载会话: {filename}")
                 except Exception as e:
                     print(f"加载失败: {e}")

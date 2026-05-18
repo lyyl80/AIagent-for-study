@@ -45,12 +45,12 @@ class SystemPromptBuilder:
 
     def _add_tool_usage(self):
         self._sections.append("## 操作原则")
-        self._sections.append("- 对话/回答问题/说明进度 → 用 talk")
-        self._sections.append("- 文件读写 → 用 read_file / write_file / replace_content")
-        self._sections.append("- 执行命令 → 用 shell (PowerShell)")
-        self._sections.append("- 搜索网络 → 用 web_search + web_content")
-        self._sections.append("- 任务完成 → 用 finish")
-        self._sections.append("- 执行失败连续3次 → 用 finish 说明原因")
+        self._sections.append("- 对话/回答问题 → talk, tool_args: {\"message\": \"...\"}")
+        self._sections.append("- 文件读写 → read_file(path)/write_file(path,content)/replace_content(path,old,new)")
+        self._sections.append("- 执行命令 → shell, tool_args: {\"command\": \"...\"}")
+        self._sections.append("- 搜索网络 → web_search, tool_args: {\"query\": \"...\"}")
+        self._sections.append("- 任务完成 → finish, tool_args: {\"response\": \"完成说明\"}")
+        self._sections.append("- 执行失败连续3次 → 用 finish")
 
     def _add_output_format(self):
         self._sections.append("## 完成条件")

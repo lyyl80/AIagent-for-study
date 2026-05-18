@@ -83,7 +83,7 @@ class ApiClient:
             raise Exception("未找到DEEPSEEK_API_KEY环境变量")
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
         full_messages = [{"role": "system", "content": system}] + messages
-        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True, max_tokens=4096)
+        response = client.chat.completions.create(model=model_key, messages=full_messages, stream=True, max_tokens=8192)
         full_content = ""
         for chunk in response:
             if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
@@ -93,7 +93,7 @@ class ApiClient:
     def _call_local(self, model_key: str, messages: List[Dict], system: str) -> str:
         full_messages = [{"role": "system", "content": system}] + messages
         try:
-            response = chat(model=model_key, messages=full_messages, stream=True, options={"num_predict": 4096})
+            response = chat(model=model_key, messages=full_messages, stream=True, options={"num_predict": 8192})
             full_content = ""
             for chunk in response:
                 content = chunk.get("message", {}).get("content", "")
@@ -107,28 +107,38 @@ class ApiClient:
         text = raw_text.strip()
         start_idx = text.find('{')
         end_idx = text.rfind('}')
-        if start_idx == -1 or end_idx == -1:
-            return [TextBlock(text=text)], TokenUsage()
 
-        try:
-            data = json.loads(text[start_idx:end_idx + 1])
-            action = data.get("action", data)
-            tool_name = action.get("tool", "")
-            tool_args = action.get("tool_args", {})
+        if start_idx == -1:
+            return [TextBlock(text=text[:500])], TokenUsage()
 
-            blocks: List[ContentBlock] = []
-            if tool_name in ("talk", "finish"):
-                msg = tool_args.get("message") or tool_args.get("content") or tool_args.get("response") or ""
-                blocks.append(TextBlock(text=msg))
-                if tool_name == "finish":
-                    blocks.append(TextBlock(text="[任务完成]"))
-            else:
-                blocks.append(ToolUse(id=f"tu_{hash(str(tool_args))}", name=tool_name, input=tool_args))
+        if end_idx > start_idx:
+            try:
+                data = json.loads(text[start_idx:end_idx + 1])
+                action = data.get("action", data)
+                tool_name = action.get("tool", "")
+                tool_args = action.get("tool_args", {})
 
-            usage = TokenUsage(input_tokens=len(raw_text) // 2, output_tokens=max(1, len(raw_text) // 4))
-            return blocks, usage
-        except json.JSONDecodeError:
-            return [TextBlock(text=raw_text[:500])], TokenUsage()
+                blocks: List[ContentBlock] = []
+                if tool_name in ("talk", "finish"):
+                    msg = (tool_args.get("message") or tool_args.get("content")
+                           or tool_args.get("response") or tool_args.get("text") or "")
+                    blocks.append(TextBlock(text=msg))
+                    if tool_name == "finish":
+                        blocks.append(TextBlock(text="[任务完成]"))
+                else:
+                    blocks.append(ToolUse(id=f"tu_{hash(str(tool_args))}", name=tool_name, input=tool_args))
+
+                usage = TokenUsage(input_tokens=len(raw_text) // 2, output_tokens=max(1, len(raw_text) // 4))
+                return blocks, usage
+            except json.JSONDecodeError:
+                pass
+
+        for key in ("text", "message", "content", "response"):
+            m = re.search(r'"' + key + r'"\s*:\s*"((?:[^"\\]|\\.)*)', text)
+            if m:
+                extracted = m.group(1).replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                return [TextBlock(text=extracted[:500])], TokenUsage()
+        return [TextBlock(text=text[:500])], TokenUsage()
 
 
 class ModelManager:

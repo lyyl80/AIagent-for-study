@@ -7,7 +7,7 @@ if project_root not in sys.path:
 
 from PySide6.QtCore import QThread, Signal
 from core.llm.client import ApiClient
-from core.runtime.conversation import ConversationRuntime
+from core.runtime.conversation import ConversationRuntime, memory_to_runtime_messages
 from core.runtime.permissions import PermissionPolicy, PermissionMode
 from core.prompt.builder import SystemPromptBuilder
 from core.tools import call_tool
@@ -43,12 +43,17 @@ class ChatWorker(QThread):
                 permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
             )
 
+            if self.memory and self.memory.history:
+                runtime.messages = memory_to_runtime_messages(self.memory.history)
+
             executor = ToolExecutor()
 
             def save_msg(role, content, tool_name="", tool_args=""):
                 if self.memory:
                     if role == "user":
                         pass  # already saved by bridge
+                    elif role == "assistant":
+                        self.memory.add_message("assistant", content)
                     elif role == "tool":
                         self.memory.add_conversation({
                             "input": {"tool": tool_name, "tool_args": tool_args},
@@ -58,12 +63,11 @@ class ChatWorker(QThread):
             runtime.run_turn(
                 self.user_input, client, executor,
                 on_text=lambda text: self.textChunk.emit(text + "\n"),
-                on_tool=lambda name, args, result, failed: [
+                on_tool=lambda name, args, result, failed:
                     self.toolInvoked.emit(
                         name, str(args), str(result) if not failed else f"执行失败: {result}"
                     ),
-                    save_msg("tool", str(result), name, str(args)),
-                ],
+                on_save=save_msg,
             )
 
         except Exception as e:
