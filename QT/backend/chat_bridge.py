@@ -20,7 +20,7 @@ from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
 from core.llm.client import ApiClient, ModelManager
-from core.config.settings import Debugmode
+from core.config.settings import Debugmode, save as save_settings, load as load_settings
 
 
 class ChatBridge(QObject):
@@ -324,6 +324,20 @@ class ChatBridge(QObject):
             model (str): 模型标识符
         """ 
         ApiClient.active_model = model
+
+    @Slot(str)
+    def setApiEnvVarName(self, name):
+        """
+        设置API密钥的环境变量名
+        
+        用户可通过Settings页面自定义环境变量名称，
+        例如设置为 MY_CUSTOM_KEY 后，代码将读取 os.environ["MY_CUSTOM_KEY"]。
+        
+        Args:
+            name (str): 环境变量名称
+        """
+        if name.strip():
+            ApiClient.env_var_name = name.strip()
 
     @Slot(str, str)
     def addCustomModel(self, key, name):

@@ -34,6 +34,7 @@ class ApiClient:
     """
     
     active_model: str = "deepseek-v4-flash"
+    env_var_name: str = "DEEPSEEK_API_KEY"
 
     def __init__(self, model: str = ""):
         """
@@ -183,11 +184,12 @@ class ApiClient:
             str: 完整的模型响应文本
             
         Raises:
-            Exception: 当环境变量DEEPSEEK_API_KEY未设置时
+            Exception: 当环境变量未设置时
         """
-        api_key = os.environ.get('DEEPSEEK_API_KEY')
+        var_name = ApiClient.env_var_name
+        api_key = os.environ.get(var_name)
         if not api_key:
-            raise Exception("未找到DEEPSEEK_API_KEY环境变量")
+            raise Exception(f"未找到{var_name}环境变量")
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
         full_messages = [{"role": "system", "content": system}] + messages
         response = client.chat.completions.create(
@@ -391,9 +393,10 @@ class ModelManager:
         """
         try:
             if model_info["type"] == "cloud":
-                api_key = os.environ.get('DEEPSEEK_API_KEY')
+                var_name = ApiClient.env_var_name
+                api_key = os.environ.get(var_name)
                 if not api_key:
-                    raise Exception("未找到DEEPSEEK_API_KEY环境变量")
+                    raise Exception(f"未找到{var_name}环境变量")
                 client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
                 full_messages = [{"role": "system", "content": system_prompt}] + messages
                 response = client.chat.completions.create(
