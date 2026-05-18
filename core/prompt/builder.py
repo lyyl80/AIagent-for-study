@@ -30,15 +30,19 @@ class SystemPromptBuilder:
         """初始化构建器，创建空的段落列表"""
         self._sections: list[str] = []
 
-    def build(self) -> str:
+    def build(self, disabled_tools: set = None) -> str:
         """
         构建完整的系统提示词
-        
+
         按顺序添加所有段落，然后用换行符连接。
-        
+
+        Args:
+            disabled_tools (set, optional): 禁用的工具名称集合，这些工具不会出现在提示词中
+
         Returns:
             str: 完整的系统提示词文本
         """
+        self._disabled_tools = disabled_tools or set()
         self._sections = []
         self._add_intro()           # 角色介绍
         self._add_environment()     # 环境信息
@@ -78,17 +82,26 @@ class SystemPromptBuilder:
         self._sections.append("6. 绝不伪造运行结果，不假设未验证的文件内容")
 
     def _add_tool_usage(self):
-        """添加工具使用指南"""
+        d = self._disabled_tools
         self._sections.append("## 操作原则")
-        self._sections.append("- 对话/回答问题 → talk, tool_args: {\"message\": \"...\"}")
-        self._sections.append("- 文件读写 → read_file(path)/write_file(path,content)/replace_content(path,old,new)")
-        self._sections.append("- 执行命令 → shell, tool_args: {\"command\": \"...\"}")
-        self._sections.append("- 网络搜索 → web_search, tool_args: {\"query\": \"...\"}")
-        self._sections.append("- 获取网页 → web_content, tool_args: {\"urls\": [\"...\"]}")
-        self._sections.append("- 列出目录 → list_directory, grep_files 搜索文件内容")
-        self._sections.append("- 文件管理 → create_directory/delete_path/copy_move/file_info")
-        self._sections.append("- Python执行 → python_exec, tool_args: {\"code\": \"...\"}")
-        self._sections.append("- 任务完全结束 → finish, tool_args: {\"response\": \"完成说明\"}")
+        if "talk" not in d:
+            self._sections.append("- 对话/回答问题 → talk, tool_args: {\"message\": \"...\"}")
+        if not d or not {"read_file","write_file","replace_content"}.issubset(d):
+            self._sections.append("- 文件读写 → read_file(path)/write_file(path,content)/replace_content(path,old,new)")
+        if "shell" not in d:
+            self._sections.append("- 执行命令 → shell, tool_args: {\"command\": \"...\"}")
+        if "web_search" not in d:
+            self._sections.append("- 网络搜索 → web_search, tool_args: {\"query\": \"...\"}")
+        if "web_content" not in d:
+            self._sections.append("- 获取网页 → web_content, tool_args: {\"urls\": [\"...\"]}")
+        if "list_directory" not in d or "grep_files" not in d:
+            self._sections.append("- 列出目录 → list_directory, grep_files 搜索文件内容")
+        if not d or not {"create_directory","delete_path","copy_move","file_info"}.issubset(d):
+            self._sections.append("- 文件管理 → create_directory/delete_path/copy_move/file_info")
+        if "python_exec" not in d:
+            self._sections.append("- Python执行 → python_exec, tool_args: {\"code\": \"...\"}")
+        if "finish" not in d:
+            self._sections.append("- 任务完全结束 → finish, tool_args: {\"response\": \"完成说明\"}")
 
     def _add_output_format(self):
         """添加输出格式和完成条件"""

@@ -22,21 +22,16 @@ from core.tools import call_tool
 class ToolExecutor:
     """
     工具执行器类
-    
+
     封装工具调用的异常处理，供ConversationRuntime使用。
     """
-    
+
+    def __init__(self, disabled_tools: set = None):
+        self._disabled_tools = disabled_tools or set()
+
     def execute(self, tool_name: str, tool_input: dict) -> str:
-        """
-        执行指定的工具
-        
-        Args:
-            tool_name (str): 工具名称
-            tool_input (dict): 工具输入参数字典
-            
-        Returns:
-            str: 工具执行结果的字符串表示，或错误信息
-        """
+        if tool_name in self._disabled_tools:
+            return "工具已被禁用"
         try:
             return str(call_tool(tool_name, **tool_input))
         except Exception as e:
@@ -104,7 +99,7 @@ class ChatWorker(QThread):
         try:
             client = self.api_client or ApiClient()
             runtime = ConversationRuntime(
-                system_prompt=SystemPromptBuilder().build(),
+                system_prompt=SystemPromptBuilder().build(disabled_tools=ApiClient._disabled_tools),
                 max_iterations=100,
                 permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
             )
@@ -113,7 +108,7 @@ class ChatWorker(QThread):
             if self.memory and self.memory.history:
                 runtime.messages = memory_to_runtime_messages(self.memory.history)
 
-            executor = ToolExecutor()
+            executor = ToolExecutor(disabled_tools=ApiClient._disabled_tools)
 
             def save_msg(role, content, tool_name="", tool_args=""):
                 """
@@ -131,10 +126,13 @@ class ChatWorker(QThread):
                     elif role == "assistant":
                         self.memory.add_message("assistant", content)
                     elif role == "tool":
-                        self.memory.add_conversation({
-                            "input": {"tool": tool_name, "tool_args": tool_args},
-                            "output": content,
-                        })
+                        if tool_name in ("talk", "finish"):
+                            self.memory.add_message("assistant", content)
+                        else:
+                            self.memory.add_conversation({
+                                "input": {"tool": tool_name, "tool_args": tool_args},
+                                "output": content,
+                            })
 
             # 执行对话轮次
             runtime.run_turn(
