@@ -20,21 +20,96 @@ Rectangle {
         anchors.margins: 24
         spacing: 12
 
-        Label {
-            text: "\u{1F527} 可用工具"
-            font.pixelSize: 20
-            font.bold: true
-            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-            color: theme ? theme.textColor : "#333"
-            antialiasing: true
-        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
 
-        Label {
-            text: "共 " + root.tools.length + " 个工具"
-            font.pixelSize: 12
-            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-            color: theme ? theme.secondaryText : "#999"
-            antialiasing: true
+            Label {
+                text: "\u{1F527} 可用工具"
+                font.pixelSize: 20
+                font.bold: true
+                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                color: theme ? theme.textColor : "#333"
+                antialiasing: true
+                Layout.fillWidth: true
+            }
+
+            Label {
+                text: "共 " + root.tools.length + " 个"
+                font.pixelSize: 12
+                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                color: theme ? theme.secondaryText : "#999"
+                antialiasing: true
+                Layout.alignment: Qt.AlignBottom
+            }
+
+            Button {
+                id: enableAllBtn
+                text: "全开"
+                font.pixelSize: 12
+                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                flat: true
+                antialiasing: true
+                enabled: root.tools.some(function(t) { return !t.enabled })
+                contentItem: Label {
+                    text: parent.text
+                    font: parent.font
+                    color: parent.enabled
+                           ? (parent.hovered
+                              ? (theme ? theme.accentColor : "#4a9eff")
+                              : (theme ? theme.secondaryText : "#666"))
+                           : (theme ? Qt.rgba(theme.secondaryText.r, theme.secondaryText.g, theme.secondaryText.b, 0.35) : "#ccc")
+                    antialiasing: true
+                }
+                background: Rectangle {
+                    implicitWidth: 40
+                    implicitHeight: 22
+                    radius: 11
+                    border.width: parent.enabled && parent.hovered ? 1 : 0
+                    border.color: theme ? theme.accentColor : "#4a9eff"
+                    color: "transparent"
+                }
+                onClicked: {
+                    for (var i = 0; i < root.tools.length; i++) {
+                        chatBridge.setToolEnabled(root.tools[i].name, true)
+                    }
+                    root.tools = chatBridge.getTools()
+                }
+            }
+
+            Button {
+                id: disableAllBtn
+                text: "全关"
+                font.pixelSize: 12
+                font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                flat: true
+                antialiasing: true
+                enabled: root.tools.some(function(t) { return t.enabled })
+                contentItem: Label {
+                    text: parent.text
+                    font: parent.font
+                    color: parent.enabled
+                           ? (parent.hovered
+                              ? (theme ? theme.accentColor : "#4a9eff")
+                              : (theme ? theme.secondaryText : "#666"))
+                           : (theme ? Qt.rgba(theme.secondaryText.r, theme.secondaryText.g, theme.secondaryText.b, 0.35) : "#ccc")
+                    antialiasing: true
+                }
+                background: Rectangle {
+                    implicitWidth: 40
+                    implicitHeight: 22
+                    radius: 11
+                    border.width: parent.enabled && parent.hovered ? 1 : 0
+                    border.color: theme ? theme.accentColor : "#4a9eff"
+                    color: "transparent"
+                }
+                onClicked: {
+                    for (var i = 0; i < root.tools.length; i++) {
+                        chatBridge.setToolEnabled(root.tools[i].name, false)
+                    }
+                    root.tools = chatBridge.getTools()
+                }
+            }
         }
 
         GridView {
@@ -61,10 +136,58 @@ Rectangle {
             }
 
             delegate: FluentCard {
+                id: toolCard
                 width: grid.cellWidth - grid.cardGap
                 height: grid.cardHeight
                 theme: root.theme
                 cardTitle: modelData.name
+                opacity: toolSwitch.checked ? 1.0 : 0.55
+
+                Item {
+                    id: toolSwitch
+                    z: 1
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.topMargin: 12
+                    anchors.rightMargin: 12
+                    width: 36
+                    height: 20
+
+                    property bool checked: false
+
+                    Component.onCompleted: {
+                        checked = modelData.enabled
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 10
+                        color: toolSwitch.checked
+                               ? (theme ? theme.accentColor : "#4a9eff")
+                               : (theme ? Qt.rgba(theme.textColor.r, theme.textColor.g, theme.textColor.b, 0.15) : "#ccc")
+                    }
+
+                    Rectangle {
+                        id: thumb
+                        width: 16
+                        height: 16
+                        radius: 8
+                        y: 2
+                        x: toolSwitch.checked ? toolSwitch.width - width - 2 : 2
+                        color: toolSwitch.checked ? "#fff" : (theme ? theme.textColor : "#555")
+                        Behavior on x {
+                            NumberAnimation { duration: 120; easing.type: Easing.OutQuad }
+                        }
+                    }
+
+                    TapHandler {
+                        onTapped: {
+                            toolSwitch.checked = !toolSwitch.checked
+                            chatBridge.setToolEnabled(modelData.name, toolSwitch.checked)
+                            modelData.enabled = toolSwitch.checked
+                        }
+                    }
+                }
 
                 Flickable {
                     anchors.fill: parent

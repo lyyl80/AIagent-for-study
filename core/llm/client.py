@@ -10,7 +10,7 @@ import json
 import os
 import re
 import copy
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 from core.config import *
 from core.runtime.types import (
     TextBlock, ToolUse, ToolResult, TokenUsage,
@@ -36,6 +36,7 @@ class ApiClient:
     
     active_model: str = "deepseek-v4-flash"
     env_var_name: str = "DEEPSEEK_API_KEY"
+    _disabled_tools: Set[str] = set()
 
     def __init__(self, model: str = ""):
         """
@@ -48,13 +49,7 @@ class ApiClient:
         self._model_info: Dict[str, Any] = {}
 
     def get_tool_definitions(self) -> List[ToolDefinition]:
-        """
-        获取所有可用工具的定义列表
-        
-        Returns:
-            List[ToolDefinition]: 工具定义列表，包含名称、描述、参数等信息
-        """
-        return TOOL_DEFINITIONS
+        return [t for t in TOOL_DEFINITIONS if t.name not in self._disabled_tools]
 
     def get_model_by_key(self, model_key: str) -> Dict[str, Any]:
         """
@@ -91,7 +86,8 @@ class ApiClient:
 
     def _call_model_raw(self, request: ApiRequest) -> str:
         model_info = self.get_model_by_key(request.model)
-        messages = self._format_messages(request)
+        is_cloud = model_info.get("type") == "cloud"
+        messages = self._format_messages(request, is_cloud)
 
         tools_payload = None
         if request.tools:
@@ -108,7 +104,7 @@ class ApiClient:
             ]
 
         try:
-            if model_info["type"] == "cloud":
+            if is_cloud:
                 return self._call_cloud(model_info["key"], messages, request.system, tools_payload)
             else:
                 return self._call_local(model_info["key"], messages, request.system, tools_payload)
@@ -122,7 +118,7 @@ class ApiClient:
                 }
             }, ensure_ascii=False)
 
-    def _format_messages(self, request: ApiRequest) -> List[Dict]:
+    def _format_messages(self, request: ApiRequest, cloud: bool = True) -> List[Dict]:
         msg_list = []
         for m in request.messages:
             if m.role == MessageRole.USER:
@@ -132,14 +128,18 @@ class ApiClient:
                 tool_calls = []
                 for b in m.blocks:
                     if isinstance(b, ToolUse):
-                        tool_calls.append({
-                            "id": b.id,
-                            "type": "function",
+                        tc_entry = {
                             "function": {
                                 "name": b.name,
-                                "arguments": json.dumps(b.input, ensure_ascii=False)
                             }
-                        })
+                        }
+                        if cloud:
+                            tc_entry["id"] = b.id
+                            tc_entry["type"] = "function"
+                            tc_entry["function"]["arguments"] = json.dumps(b.input, ensure_ascii=False)
+                        else:
+                            tc_entry["function"]["arguments"] = b.input
+                        tool_calls.append(tc_entry)
                 entry = {"role": "assistant"}
                 if text and not tool_calls:
                     entry["content"] = text
@@ -328,6 +328,9 @@ class ModelManager:
         "本地模型": {
             "gemma3:12b": {"name": "gemma3:12b", "type": "local"},
             "gpt-oss:20b": {"name": "gpt-oss:20b", "type": "local"},
+            "qwen3.5:9b": {"name": "qwen3.5:9b", "type": "local"},
+
+
         }
     }
 

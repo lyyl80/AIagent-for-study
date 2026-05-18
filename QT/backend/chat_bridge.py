@@ -299,7 +299,7 @@ class ChatBridge(QObject):
         过滤掉内部工具（talk、finish），提取必需和可选参数。
         
         Returns:
-            list: 包含name、description、required_params、optional_params的字典列表
+            list: 包含name、description、required_params、optional_params、enabled的字典列表
         """
         from core.tools import TOOL_DEFINITIONS
         result = []
@@ -312,9 +312,26 @@ class ChatBridge(QObject):
                 "name": td.name,
                 "description": td.description,
                 "required_params": required,
-                "optional_params": optional
+                "optional_params": optional,
+                "enabled": td.name not in ApiClient._disabled_tools
             })
         return result
+
+    @Slot(str, bool)
+    def setToolEnabled(self, name, enabled):
+        """
+        启用或禁用指定工具
+        
+        禁用的工具将不会出现在SendMessage时发送给AI的上下文里。
+        
+        Args:
+            name (str): 工具名称
+            enabled (bool): 是否启用
+        """
+        if enabled:
+            ApiClient._disabled_tools.discard(name)
+        else:
+            ApiClient._disabled_tools.add(name)
 
     @Slot(str, str, result=str)
     def callToolDirectly(self, tool_name, args_json):
