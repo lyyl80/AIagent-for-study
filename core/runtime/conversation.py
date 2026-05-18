@@ -186,13 +186,13 @@ class ConversationRuntime:
             # 调用LLM（带思考动画）
             if on_think_begin:
                 on_think_begin()
-            blocks, usage = api_client.stream(request)
+            blocks, usage, reasoning = api_client.stream(request)
             if on_think_end:
                 on_think_end()
             total_usage += usage
 
-            # 添加助手消息到历史
             msg = ConversationMessage.assistant(blocks, usage)
+            msg.reasoning_content = reasoning
             self.messages.append(msg)
 
             # 检查是否有工具调用

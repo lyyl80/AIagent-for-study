@@ -691,36 +691,6 @@ def finish_tool(**kwargs) -> str:
     return kwargs.get("response", "任务完成")
 
 
-def weather_tool(**kwargs) -> str:
-    """
-    天气查询工具
-    
-    使用wttr.in免费API获取天气信息。
-    
-    Args:
-        city (str): 城市名称
-        detail (bool, optional): 是否返回详细信息，默认False
-        
-    Returns:
-        str: 格式化的天气信息或错误提示
-    """
-    city = kwargs.get("city", "")
-    if not city:
-        return "Error: 缺少参数 city"
-    try:
-        fmt = "4" if kwargs.get("detail") else "3"
-        url = f"https://wttr.in/{requests.utils.quote(city)}?format={fmt}&lang=zh"
-        resp = requests.get(url, headers=_WEB_HEADERS, timeout=10)
-        if resp.status_code == 200:
-            text = resp.text.strip()
-            if "Unknown" in text or "Sorry" in text:
-                return f"找不到城市: {city}"
-            return text
-        return f"HTTP {resp.status_code}"
-    except Exception as e:
-        return f"Error: {e}"
-
-
 def speaking_tool(**kwargs) -> str:
     """
     文字转语音工具

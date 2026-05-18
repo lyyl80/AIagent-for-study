@@ -73,8 +73,8 @@ class SystemPromptBuilder:
         self._sections.append("1. 每一步以纯JSON返回: {\"action\":{\"tool\":\"tool_name\",\"tool_args\":{}}}")
         self._sections.append("2. 使用 tools 中提供的工具，参数必须准确")
         self._sections.append("3. 每次操作后验证结果，失败则分析原因调整策略")
-        self._sections.append("4. 连续3次不同策略均失败 → 使用 finish")
-        self._sections.append("5. 信息不足时用 talk 主动询问，绝不输出空工具名")
+        self._sections.append("4. 连续5次不同工具合理尝试仍失败，且已用 talk 与用户确认需求后，才可使用 finish")
+        self._sections.append("5. 不确定时立即用 talk 询问用户，绝不输出空工具名")
         self._sections.append("6. 绝不伪造运行结果，不假设未验证的文件内容")
 
     def _add_tool_usage(self):
@@ -88,12 +88,11 @@ class SystemPromptBuilder:
         self._sections.append("- 列出目录 → list_directory, grep_files 搜索文件内容")
         self._sections.append("- 文件管理 → create_directory/delete_path/copy_move/file_info")
         self._sections.append("- Python执行 → python_exec, tool_args: {\"code\": \"...\"}")
-        self._sections.append("- 任务完成 → finish, tool_args: {\"response\": \"完成说明\"}")
-        self._sections.append("- 执行失败连续3次 → 用 finish")
+        self._sections.append("- 任务完全结束 → finish, tool_args: {\"response\": \"完成说明\"}")
 
     def _add_output_format(self):
         """添加输出格式和完成条件"""
         self._sections.append("## 完成条件")
         self._sections.append("- 文件操作: 创建成功且内容验证后 finish")
         self._sections.append("- 信息查询: 提供完整回答后 finish")
-        self._sections.append("- 失败: 尝试3种不同策略无法解决时 finish")
+        self._sections.append("- 确认用户意图完成、或经5次不同工具尝试+talk确认后仍无法解决时 finish")

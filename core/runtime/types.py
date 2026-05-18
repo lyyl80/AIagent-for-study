@@ -104,6 +104,7 @@ class ConversationMessage:
     role: MessageRole
     blocks: List[ContentBlock] = field(default_factory=list)
     usage: Optional['TokenUsage'] = None
+    reasoning_content: str = ""
 
     @staticmethod
     def user_text(text: str) -> 'ConversationMessage':
