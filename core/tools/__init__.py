@@ -13,43 +13,53 @@ TOOL_FUNCTIONS: Dict[str, Callable] = {
     "finish": finish_tool,
     "weather": weather_tool,
     "speaking": speaking_tool,
+    "list_directory": list_directory,
+    "create_directory": create_directory,
+    "delete_path": delete_path,
+    "copy_move": copy_move,
+    "grep_files": grep_files,
+    "file_info": file_info,
+    "python_exec": python_exec_tool,
 }
 
 TOOL_DEFINITIONS = [
     ToolDefinition(
         name="read_file",
-        description="读取文件内容",
+        description="读取文件内容（自动检测编码，支持搜索/行范围/max_lines）",
         input_schema={
             "type": "object",
             "properties": {
                 "file_path": {"type": "string", "description": "文件路径"},
-                "start_line": {"type": "integer", "description": "开始行号(1-based)"},
+                "start_line": {"type": "integer", "description": "开始行号"},
                 "end_line": {"type": "integer", "description": "结束行号"},
-                "search": {"type": "string", "description": "搜索字符串，返回匹配行"},
+                "search": {"type": "string", "description": "搜索字符串"},
+                "max_lines": {"type": "integer", "description": "最大行数，默认500"},
             },
             "required": ["file_path"]
         }
     ),
     ToolDefinition(
         name="write_file",
-        description="写入文件内容",
+        description="写入文件（自动创建父目录，支持追加/备份）",
         input_schema={
             "type": "object",
             "properties": {
                 "file_path": {"type": "string", "description": "文件路径"},
-                "content": {"type": "string", "description": "要写入的内容"},
+                "content": {"type": "string", "description": "写入内容"},
+                "append": {"type": "boolean", "description": "追加模式"},
+                "backup": {"type": "boolean", "description": "覆盖前备份为 .bak"},
             },
             "required": ["file_path", "content"]
         }
     ),
     ToolDefinition(
         name="shell",
-        description="执行shell命令(Windows PowerShell)",
+        description="执行 PowerShell 命令",
         input_schema={
             "type": "object",
             "properties": {
                 "command": {"type": "string", "description": "命令字符串"},
-                "timeout": {"type": "integer", "description": "超时时间(秒)", "default": 30},
+                "timeout": {"type": "integer", "description": "超时秒数，默认60"},
                 "cwd": {"type": "string", "description": "工作目录"},
             },
             "required": ["command"]
@@ -57,7 +67,7 @@ TOOL_DEFINITIONS = [
     ),
     ToolDefinition(
         name="talk",
-        description="与用户对话/回复/说明进度",
+        description="与用户对话/回复",
         input_schema={
             "type": "object",
             "properties": {
@@ -68,35 +78,37 @@ TOOL_DEFINITIONS = [
     ),
     ToolDefinition(
         name="replace_content",
-        description="替换文件中内容(精确匹配)",
+        description="替换文件内容（支持精确匹配/正则/计数）",
         input_schema={
             "type": "object",
             "properties": {
                 "file_path": {"type": "string", "description": "文件路径"},
-                "old_content": {"type": "string", "description": "要替换的旧内容"},
+                "old_content": {"type": "string", "description": "旧内容"},
                 "new_content": {"type": "string", "description": "新内容"},
+                "regex": {"type": "boolean", "description": "使用正则模式"},
+                "count": {"type": "integer", "description": "替换次数，0=全部"},
             },
             "required": ["file_path", "old_content", "new_content"]
         }
     ),
     ToolDefinition(
         name="web_search",
-        description="网络搜索",
+        description="Bing 网络搜索",
         input_schema={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "搜索查询"},
+                "query": {"type": "string", "description": "搜索关键词"},
             },
             "required": ["query"]
         }
     ),
     ToolDefinition(
         name="web_content",
-        description="获取网页内容",
+        description="获取网页纯文本内容",
         input_schema={
             "type": "object",
             "properties": {
-                "urls": {"type": "array", "items": {"type": "string"}, "description": "网址列表"},
+                "urls": {"type": "array", "items": {"type": "string"}, "description": "URL 列表"},
             },
             "required": ["urls"]
         }
@@ -119,6 +131,7 @@ TOOL_DEFINITIONS = [
             "type": "object",
             "properties": {
                 "city": {"type": "string", "description": "城市名称"},
+                "detail": {"type": "boolean", "description": "详细预报"},
             },
             "required": ["city"]
         }
@@ -130,8 +143,98 @@ TOOL_DEFINITIONS = [
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "文本内容"},
+                "rate": {"type": "integer", "description": "语速，默认150"},
+                "volume": {"type": "number", "description": "音量 0-1，默认1.0"},
             },
             "required": ["text"]
+        }
+    ),
+    # ========== 新增工具 ==========
+    ToolDefinition(
+        name="list_directory",
+        description="列出目录内容（含大小/修改时间/类型，可过滤隐藏和正则）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "目录路径，默认当前"},
+                "all": {"type": "boolean", "description": "包含隐藏文件"},
+                "pattern": {"type": "string", "description": "文件名正则过滤"},
+            },
+            "required": []
+        }
+    ),
+    ToolDefinition(
+        name="create_directory",
+        description="创建目录（递归创建父目录）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "目录路径"},
+            },
+            "required": ["path"]
+        }
+    ),
+    ToolDefinition(
+        name="delete_path",
+        description="删除文件或目录",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "路径"},
+                "recursive": {"type": "boolean", "description": "递归删除（目录非空时必填）"},
+            },
+            "required": ["path"]
+        }
+    ),
+    ToolDefinition(
+        name="copy_move",
+        description="复制或移动文件/目录",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "src": {"type": "string", "description": "源路径"},
+                "dst": {"type": "string", "description": "目标路径"},
+                "action": {"type": "string", "description": "copy(默认) 或 move"},
+            },
+            "required": ["src", "dst"]
+        }
+    ),
+    ToolDefinition(
+        name="grep_files",
+        description="在文件中搜索正则表达式（类似 grep -r）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "pattern": {"type": "string", "description": "正则模式"},
+                "path": {"type": "string", "description": "搜索路径，默认当前目录"},
+                "include": {"type": "string", "description": "文件 glob，默认 *"},
+                "exclude": {"type": "string", "description": "排除文件 glob"},
+                "max_results": {"type": "integer", "description": "最大结果数，默认50"},
+                "ignore_case": {"type": "boolean", "description": "忽略大小写，默认True"},
+            },
+            "required": ["pattern"]
+        }
+    ),
+    ToolDefinition(
+        name="file_info",
+        description="获取文件/目录详细信息（大小/时间/MD5/权限）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "路径"},
+            },
+            "required": ["path"]
+        }
+    ),
+    ToolDefinition(
+        name="python_exec",
+        description="执行 Python 代码片段（隔离沙箱）",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "Python 代码"},
+            },
+            "required": ["code"]
         }
     ),
 ]
@@ -160,7 +263,9 @@ def call_tool(tool_name: str, **kwargs) -> Any:
         required = schema.get("required_params", [])
         aliases = {
             "file_path": ["path"],
-            "message": ["content", "text"]
+            "message": ["content", "text"],
+            "src": ["source", "from"],
+            "dst": ["dest", "destination", "to"],
         }
         for param in required:
             if param not in kwargs:

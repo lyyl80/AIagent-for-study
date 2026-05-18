@@ -48,7 +48,11 @@ class SystemPromptBuilder:
         self._sections.append("- 对话/回答问题 → talk, tool_args: {\"message\": \"...\"}")
         self._sections.append("- 文件读写 → read_file(path)/write_file(path,content)/replace_content(path,old,new)")
         self._sections.append("- 执行命令 → shell, tool_args: {\"command\": \"...\"}")
-        self._sections.append("- 搜索网络 → web_search, tool_args: {\"query\": \"...\"}")
+        self._sections.append("- 网络搜索 → web_search, tool_args: {\"query\": \"...\"}")
+        self._sections.append("- 获取网页 → web_content, tool_args: {\"urls\": [\"...\"]}")
+        self._sections.append("- 列出目录 → list_directory, grep_files 搜索文件内容")
+        self._sections.append("- 文件管理 → create_directory/delete_path/copy_move/file_info")
+        self._sections.append("- Python执行 → python_exec, tool_args: {\"code\": \"...\"}")
         self._sections.append("- 任务完成 → finish, tool_args: {\"response\": \"完成说明\"}")
         self._sections.append("- 执行失败连续3次 → 用 finish")
 

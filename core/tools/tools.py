@@ -1,443 +1,554 @@
 import subprocess
 import sys
+import os
 import platform
+import shutil
+import stat
+import re
+import hashlib
+from pathlib import Path
+from typing import Any
 import requests
 from bs4 import BeautifulSoup
-import re
 import chardet
-import pyttsx3
+try:
+    import pyttsx3
+except ImportError:
+    pyttsx3 = None
 
 
-def read_file_tool(**kwargs):
-    """
-    读取文件内容
-    :param file_path: 文件路径 (也接受 path 参数)
-    :param start_line: 可选，开始行号 (1-based)
-    :param end_line: 可选，结束行号 (1-based)
-    :param search: 可选，搜索字符串，返回包含该字符串的行
-    :return: 文件内容字符串或搜索结果
-    """
+def _auto_encode(file_path: str) -> str:
+    """自动检测文件编码并读取"""
+    with open(file_path, 'rb') as f:
+        raw = f.read()
+    if not raw:
+        return ''
+    result = chardet.detect(raw)
+    encoding = result.get('encoding', 'utf-8') or 'utf-8'
+    return raw.decode(encoding, errors='replace')
+
+
+# ============================================================
+# 文件操作工具
+# ============================================================
+
+def read_file_tool(**kwargs) -> str:
+    """读取文件内容"""
+    file_path = kwargs.get("file_path") or kwargs.get("path")
+    if not file_path:
+        return "Error: 缺少参数 file_path"
+    if not os.path.isfile(file_path):
+        return f"Error: 文件不存在: {file_path}"
+
     try:
-        file_path = kwargs.get("file_path") or kwargs.get("path")
-        start_line = kwargs.get("start_line")
-        end_line = kwargs.get("end_line")
-        search = kwargs.get("search")
-        
-        if not file_path:
-            return "Error: Missing file path parameter (file_path or path)"
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-        
-        if search:
-            # 搜索模式：返回包含搜索字符串的行及其行号
-            result = []
-            for i, line in enumerate(lines, 1):
-                if search in line:
-                    result.append(f"Line {i}: {line.rstrip()}")
-            if result:
-                return "\n".join(result)
+        if os.path.getsize(file_path) > 5 * 1024 * 1024:
+            return f"Error: 文件过大 ({os.path.getsize(file_path) // 1024}KB)，超过 5MB 限制"
+
+        content = _auto_encode(file_path)
+        lines = content.splitlines(keepends=True)
+
+        if "search" in kwargs:
+            found = []
+            for i, li in enumerate(lines, 1):
+                if kwargs["search"] in li:
+                    found.append(f"L{i}: {li.rstrip()}")
+            return "\n".join(found) if found else f"未找到: '{kwargs['search']}'"
+
+        start = int(kwargs.get("start_line", 1))
+        end = kwargs.get("end_line")
+        if end is not None:
+            end = int(end)
+            if start < 1 or end < start or end > len(lines):
+                return f"Error: 行号无效，文件共 {len(lines)} 行"
+            return "".join(lines[start - 1:end])
+
+        if start > 1:
+            return "".join(lines[start - 1:])
+
+        max_lines = kwargs.get("max_lines", 500)
+        if isinstance(max_lines, str):
+            max_lines = int(max_lines)
+        if len(lines) > max_lines:
+            return "".join(lines[:max_lines]) + f"\n... (共 {len(lines)} 行，已截断前 {max_lines} 行)"
+        return content
+
+    except Exception as e:
+        return f"Error: 读取文件失败: {e}"
+
+
+def write_file_tool(**kwargs) -> str:
+    """写入文件内容"""
+    file_path = kwargs.get("file_path") or kwargs.get("path")
+    content = kwargs.get("content")
+    if not file_path:
+        return "Error: 缺少参数 file_path"
+    if content is None:
+        return "Error: 缺少参数 content"
+
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(file_path)) or ".", exist_ok=True)
+
+        if kwargs.get("append"):
+            mode = 'a'
+        else:
+            mode = 'w'
+            if kwargs.get("backup") and os.path.isfile(file_path):
+                bak = file_path + ".bak"
+                shutil.copy2(file_path, bak)
+
+        with open(file_path, mode, encoding='utf-8') as f:
+            f.write(content)
+
+        size = os.path.getsize(file_path)
+        return f"写入成功: {file_path} ({size} 字节)"
+    except Exception as e:
+        return f"Error: 写入文件失败: {e}"
+
+
+def replace_content_tool(**kwargs) -> str:
+    """替换文件内容（支持精确匹配、正则、计数）"""
+    file_path = kwargs.get("file_path") or kwargs.get("path")
+    old_val = kwargs.get("old_content", "")
+    new_val = kwargs.get("new_content", "")
+    if not file_path:
+        return "Error: 缺少参数 file_path"
+
+    try:
+        if not os.path.isfile(file_path):
+            return f"Error: 文件不存在: {file_path}"
+        content = _auto_encode(file_path)
+    except Exception as e:
+        return f"Error: 读取文件失败: {e}"
+
+    use_regex = kwargs.get("regex", False)
+    count = int(kwargs.get("count", 0) or 0)
+
+    if use_regex:
+        try:
+            new_content, n = re.subn(old_val, new_val, content, count=count if count > 0 else 0)
+        except re.error as e:
+            return f"Error: 正则表达式无效: {e}"
+    else:
+        if old_val not in content:
+            return f"Error: 文件中未找到要替换的内容"
+        if count > 1:
+            new_content = content.replace(old_val, new_val, count)
+            n = min(count, content.count(old_val))
+        else:
+            new_content = content.replace(old_val, new_val, 1)
+            n = 1 if old_val in content else 0
+
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        return f"替换成功: {file_path} ({n} 处替换)"
+    except Exception as e:
+        return f"Error: 写入文件失败: {e}"
+
+
+# ============================================================
+# 目录 / 文件管理工具
+# ============================================================
+
+def list_directory(**kwargs) -> str:
+    """列出目录内容（含文件大小、修改时间、类型）"""
+    path = kwargs.get("path", ".")
+    if not os.path.isdir(path):
+        return f"Error: 目录不存在: {path}"
+
+    try:
+        show_hidden = kwargs.get("all", False)
+        pattern = kwargs.get("pattern")
+        entries = []
+        for name in os.listdir(path):
+            if not show_hidden and name.startswith('.'):
+                continue
+            if pattern and not re.search(pattern, name):
+                continue
+
+            full = os.path.join(path, name)
+            st = os.stat(full)
+            size = st.st_size
+            if size >= 1024 * 1024:
+                size_str = f"{size / (1024 * 1024):.1f}M"
+            elif size >= 1024:
+                size_str = f"{size / 1024:.1f}K"
             else:
-                return f"No lines found containing: '{search}'"
-        
-        if start_line and end_line:
-            # 行范围模式
-            start_line = int(start_line)
-            end_line = int(end_line)
-            if start_line < 1 or end_line < start_line or end_line > len(lines):
-                return f"Error: Invalid line range. File has {len(lines)} lines."
-            selected_lines = lines[start_line-1:end_line]
-            return "".join(selected_lines)
-        
-        # 默认：读取整个文件
-        return "".join(lines)
-    
-    except FileNotFoundError:
-        return f"Error: File not found: {file_path}"
+                size_str = f"{size}B"
+            import time
+            mtime = time.strftime('%Y-%m-%d %H:%M', time.localtime(st.st_mtime))
+            kind = "[DIR]" if os.path.isdir(full) else "[FILE]"
+            entries.append(f"{kind} {name}  {size_str}  {mtime}")
+
+        entries.sort(key=lambda e: ("[DIR]" not in e, e.lower()))
+        header = f"[目录] {os.path.abspath(path)} ({len(entries)} 项)"
+        return header + "\n" + "\n".join(entries) if entries else header + "\n  (空)"
     except Exception as e:
-        print(e)
-        return f"Error reading file: {str(e)}"
+        return f"Error: 列出目录失败: {e}"
 
-def write_file_tool(**kwargs):
-    """
-    写入文件内容
-    :param file_path: 文件路径 (也接受 path 参数)
-    :param content: 文件内容字符串
-    :return: None
-    """
+
+def create_directory(**kwargs) -> str:
+    """创建目录"""
+    path = kwargs.get("path", "")
+    if not path:
+        return "Error: 缺少参数 path"
     try:
-        file_path = kwargs.get("file_path") or kwargs.get("path")
-        content = kwargs["content"]
-        if not file_path:
-            return "Error: Missing file path parameter (file_path or path)"
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(content)
-        return f"Successfully wrote to file: {file_path}"
+        os.makedirs(path, exist_ok=True)
+        return f"目录已创建: {os.path.abspath(path)}"
     except Exception as e:
-        print(e)
-        return "Error writing file"
+        return f"Error: 创建目录失败: {e}"
 
-def run_shell(**kwargs):
-    """
-    执行shell命令
-    :param command: shell命令字符串
-    :param timeout: 可选，超时时间（秒），默认30秒
-    :param cwd: 可选，工作目录
-    :return: 命令输出结果
-    """
+
+def delete_path(**kwargs) -> str:
+    """删除文件或目录"""
+    path = kwargs.get("path", "")
+    if not path:
+        return "Error: 缺少参数 path"
     try:
-        command = kwargs["command"]
-        timeout = kwargs.get("timeout", 30)
-        cwd = kwargs.get("cwd")
-        
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-            timeout=timeout,
-            cwd=cwd
-        )
-        
-        if result.returncode != 0:
-            return f"Command failed with exit code {result.returncode}: {result.stderr}"
-        
-        # 截断过长输出
-        if len(result.stdout) > 2000:
-            return result.stdout[:2000] + "\n... (output truncated)"
-        
-        return result.stdout
-        
-    except subprocess.TimeoutExpired:
-        return f"Command timed out after {timeout} seconds"
-    except subprocess.CalledProcessError as e:
-        return f"Error executing command: {str(e)}"
+        if not os.path.exists(path):
+            return f"Error: 路径不存在: {path}"
+        if os.path.isdir(path):
+            if not kwargs.get("recursive"):
+                return f"Error: 目录非空，请设置 recursive=true: {path}"
+            shutil.rmtree(path)
+            return f"已递归删除目录: {path}"
+        else:
+            os.remove(path)
+            return f"已删除文件: {path}"
     except Exception as e:
-        return f"Unexpected error: {str(e)}"
+        return f"Error: 删除失败: {e}"
 
-def talk_tool(**kwargs):
-   """
-   聊天
-   :param message: 聊天内容 (也接受 text, content 参数)
-   :return: 聊天结果
-   """
-   message = kwargs.get("message") or kwargs.get("content") or kwargs.get("text")
-   if not message:
-       return "错误: 缺少聊天内容参数 'message', 'content' 或 'text'"
-   return message
 
-def replace_content_tool(**kwargs):
-    """
-    替换文件中的现有内容
-    :param file_path: 文件路径 (也接受 path 参数)
-    :param old_content: 要替换的旧内容字符串
-    :param new_content: 新的内容字符串
-    :return: 操作结果
-    """
+def copy_move(**kwargs) -> str:
+    """复制或移动文件/目录"""
+    src = kwargs.get("src", "")
+    dst = kwargs.get("dst", "")
+    action = kwargs.get("action", "copy")
+    if not src or not dst:
+        return "Error: 缺少 src 或 dst 参数"
+    if not os.path.exists(src):
+        return f"Error: 源路径不存在: {src}"
+
     try:
-        file_path = kwargs.get("file_path") or kwargs.get("path")
-        old_content = kwargs.get("old_content")
-        new_content = kwargs.get("new_content")
-        
-        if not file_path:
-            return "Error: Missing file path parameter (file_path or path)"
-        if old_content is None:
-            return "Error: Missing old_content parameter"
-        if new_content is None:
-            return "Error: Missing new_content parameter"
-        
-        # 读取文件内容
-        with open(file_path, 'r', encoding='utf-8') as file:
-            content = file.read()
-        
-        # 检查旧内容是否存在
-        if old_content not in content:
-            return f"Error: Old content not found in file: {file_path}"
-        
-        # 替换内容
-        new_file_content = content.replace(old_content, new_content, 1)  # 只替换第一次出现
-        
-        # 写回文件
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(new_file_content)
-        
-        return f"Successfully replaced content in file: {file_path}"
-    
-    except FileNotFoundError:
-        return f"Error: File not found: {file_path}"
+        os.makedirs(os.path.dirname(os.path.abspath(dst)) or ".", exist_ok=True)
+        if action == "move":
+            shutil.move(src, dst)
+            return f"已移动: {src} -> {dst}"
+        else:
+            if os.path.isdir(src):
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dst)
+            return f"已复制: {src} -> {dst}"
     except Exception as e:
-        print(e)
-        return f"Error replacing content in file: {str(e)}"
+        return f"Error: {'移动' if action == 'move' else '复制'}失败: {e}"
 
-def web_content_tool(**kwargs):
-    """
-    获取一个或多个指定网页的内容并拼接返回
-    :param urls: 网页URL地址列表 (也接受单个url参数)
-    :return: 所有网页内容拼接后的纯文本
-    """
+
+def grep_files(**kwargs) -> str:
+    """在文件中搜索正则表达式"""
+    pattern = kwargs.get("pattern", "")
+    path_spec = kwargs.get("path", ".")
+    if not pattern:
+        return "Error: 缺少参数 pattern"
+
     try:
-        # 支持单个URL或URL列表
-        urls = kwargs.get("urls")
-        if isinstance(urls, str):
-            urls = [urls]
-        elif not isinstance(urls, list):
-            return "错误: 请提供一个URL字符串或URL列表"
-        
-        if not urls:
-            return "错误: 未提供任何URL"
-        
-        all_content = []
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
-        
-        for i, original_url in enumerate(urls, 1):
-            try:
-                # 直接使用传入的URL，不再处理百度跳转链接
-                url = original_url
-                
-                # 发送请求获取网页内容
-                response = requests.get(url, headers=headers, timeout=10)
-                response.raise_for_status()
-                
-                # 尝试检测并设置正确的编码
-                detected_encoding = chardet.detect(response.content)
-                if detected_encoding and detected_encoding['encoding']:
-                    # 使用检测到的编码重新解码内容
-                    decoded_content = response.content.decode(detected_encoding['encoding'])
-                else:
-                    # 如果检测不到编码，尝试常用中文编码
-                    try:
-                        decoded_content = response.content.decode('utf-8')
-                    except UnicodeDecodeError:
-                        try:
-                            decoded_content = response.content.decode('gbk')
-                        except UnicodeDecodeError:
-                            decoded_content = response.content.decode('gb2312', errors='ignore')
-                
-                # 使用BeautifulSoup解析网页内容
-                soup = BeautifulSoup(decoded_content, "html.parser")
-                
-                # 移除脚本和样式元素
-                for script in soup(["script", "style"]):
-                    script.decompose()
-                
-                # 提取网页正文内容
-                content_tags = ['main', 'article', '.content', '#content', 'div.content', '.post', '.entry', 'div.post', 'div.entry', '[role="main"]', '.main-content']
-                content = None
-                
-                for tag in content_tags:
-                    content = soup.select_one(tag)
-                    if content:
+        compiled = re.compile(pattern)
+    except re.error as e:
+        return f"Error: 正则表达式无效: {e}"
+
+    results = []
+    max_results = int(kwargs.get("max_results", 50))
+    include = kwargs.get("include", "*")
+    exclude = kwargs.get("exclude")
+    ignore_case = kwargs.get("ignore_case", True)
+
+    if ignore_case and not (pattern.startswith('(?') and pattern.endswith(')')):
+        compiled = re.compile(pattern, re.IGNORECASE)
+
+    import fnmatch
+    search_path = Path(path_spec)
+    if not search_path.exists():
+        return f"Error: 路径不存在: {path_spec}"
+
+    files = search_path.rglob(include) if search_path.is_dir() else [search_path]
+    for fp in files:
+        if not fp.is_file():
+            continue
+        if exclude and fnmatch.fnmatch(fp.name, exclude):
+            continue
+        if fp.stat().st_size > 2 * 1024 * 1024:
+            continue
+        try:
+            for i, line in enumerate(open(fp, 'r', encoding='utf-8', errors='replace'), 1):
+                if compiled.search(line):
+                    results.append(f"{fp}:{i}: {line.rstrip()[:200]}")
+                    if len(results) >= max_results:
                         break
-                
-                # 如果没有找到指定的内容区域，就使用body标签的内容
-                if not content:
-                    body = soup.find('body')
-                    if body:
-                        content = body
-                    else:
-                        content = soup
-                
-                # 获取文本内容并清理
-                text = content.get_text()
-                
-                # 清理文本 - 去除多余的空白字符
-                lines = (line.strip() for line in text.splitlines())
-                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-                text = ' '.join(chunk for chunk in chunks if chunk)
-                
-                # 添加当前网页的序号和内容到总内容中
-                all_content.append(f"\n--- 网页 {i} ({original_url}) -> ({url}) ---\n{text}\n--- 网页 {i} 结束 ---\n")
-                
-            except requests.RequestException as e:
-                all_content.append(f"\n--- 网页 {i} ({original_url}) 请求失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
-            except UnicodeDecodeError as e:
-                all_content.append(f"\n--- 网页 {i} ({original_url}) 解码失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
-            except Exception as e:
-                all_content.append(f"\n--- 网页 {i} ({original_url}) 处理失败 ---\n错误: {str(e)}\n--- 网页 {i} 结束 ---\n")
-        
-        # 拼接所有内容
-        final_content = ''.join(all_content)
-        
-        # 限制返回内容长度，防止输出过长
-        max_length = 2000  # 增加最大长度以容纳多个网页内容
-        if len(final_content) > max_length:
-            final_content = final_content[:max_length] + "\n\n... (内容已截断)"
-        
-        return final_content
-        
-    except Exception as e:
-        return f"获取网页内容时发生错误: {str(e)}"
-def speaking_tool(**kwargs):
-    """
-    使用pyttsx3进行文字转语音
-    :param text: 需要转换的文本
-    :return: 转换后的音频文件
-    """
-    
-    engine = pyttsx3.init()
-    engine.setProperty('rate', 150)
-    engine.setProperty('volume', 1.0)
-    engine.setProperty('voice', 'zh')
-    engine.say(kwargs["text"])
-    engine.runAndWait()
+        except Exception:
+            pass
+        if len(results) >= max_results:
+            break
 
-    return "success"
+    if not results:
+        return f"未找到匹配 '{pattern}' 的结果"
+    suffix = f"\n... (共 {len(results)} 条)" if len(results) == max_results else ""
+    return f"找到 {len(results)} 条:\n" + "\n".join(results) + suffix
 
 
-    
+def file_info(**kwargs) -> str:
+    """获取文件/目录详细信息"""
+    path = kwargs.get("path", "")
+    if not path or not os.path.exists(path):
+        return f"Error: 路径不存在: {path}"
 
-
-def web_search_tool(**kwargs):
-    """
-    使用必应(Bing)搜索
-    :param query: 搜索查询字符串
-    :return: 搜索结果
-    """
     try:
-        query = kwargs["query"]
-        # 使用更真实的浏览器头部信息
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
+        st = os.stat(path)
+        info = {
+            "名称": os.path.basename(path),
+            "完整路径": os.path.abspath(path),
+            "类型": "目录" if os.path.isdir(path) else "文件",
+            "大小": f"{st.st_size:,} 字节",
+            "权限": oct(st.st_mode)[-3:],
         }
-        
-        # 必应搜索URL
-        url = f"https://www.bing.com/search?q={query}"
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, "html.parser")
-        
-        # 提取必应搜索结果标题和链接
-        search_results = []
-        
-        # 尝试多种可能的选择器来获取搜索结果
-        selectors = [
-            'li.b_algo',           # 主要选择器 - 必应搜索结果容器
-            'div.b_title',         # 标题选择器
-            'ol#b_results li'      # 搜索结果列表项
-        ]
-        
-        # 首先尝试主要选择器
-        results = soup.select('li.b_algo')
+        if os.path.isfile(path):
+            with open(path, 'rb') as f:
+                info["MD5"] = hashlib.md5(f.read(65536)).hexdigest() if st.st_size < 10 * 1024 * 1024 else "(文件过大，跳过)"
+        import time
+        info["修改时间"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st.st_mtime))
+        info["创建时间"] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st.st_ctime))
+        return "\n".join(f"  {k}: {v}" for k, v in info.items())
+    except Exception as e:
+        return f"Error: 获取文件信息失败: {e}"
+
+
+# ============================================================
+# Shell 命令
+# ============================================================
+
+def run_shell(**kwargs) -> str:
+    """执行 Shell 命令 (Windows PowerShell)"""
+    command = kwargs.get("command", "")
+    if not command:
+        return "Error: 缺少参数 command"
+
+    timeout = int(kwargs.get("timeout", 60))
+    cwd = kwargs.get("cwd")
+    input_str = kwargs.get("input")  # stdin
+
+    try:
+        if platform.system() == "Windows":
+            proc = subprocess.Popen(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                 "-Command", command],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                cwd=cwd, text=True, encoding='utf-8', errors='replace'
+            )
+        else:
+            proc = subprocess.Popen(
+                command, shell=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                cwd=cwd, text=True, encoding='utf-8', errors='replace'
+            )
+
+        try:
+            out, err = proc.communicate(input=input_str, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            return f"命令超时 ({timeout}s)"
+
+        if proc.returncode != 0:
+            return f"退出码 {proc.returncode}: {err or out}"[:3000]
+
+        if len(out) > 8000:
+            out = out[:7000] + f"\n... (共 {len(out)} 字符，已截断)"
+
+        return out or "(无输出)"
+    except FileNotFoundError:
+        return f"Error: powershell 未找到"
+    except Exception as e:
+        return f"Error: 执行命令失败: {e}"
+
+
+# ============================================================
+# 网络 / 搜索工具
+# ============================================================
+
+_WEB_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+}
+
+
+def web_search_tool(**kwargs) -> str:
+    """Bing 搜索"""
+    query = kwargs.get("query", "")
+    if not query:
+        return "Error: 缺少参数 query"
+
+    try:
+        url = f"https://www.bing.com/search?q={requests.utils.quote(query)}&setlang=zh-cn"
+        resp = requests.get(url, headers=_WEB_HEADERS, timeout=15)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        results = []
+
+        for li in soup.select("li.b_algo"):
+            a = li.find("a", href=True)
+            h2 = li.find("h2")
+            p = li.find("p") or li.find("div", class_="b_caption")
+            if a and h2:
+                title = h2.get_text(strip=True)
+                link = a["href"]
+                desc = p.get_text(strip=True) if p else ""
+                if title and not link.startswith("javascript:"):
+                    results.append(f"{len(results) + 1}. {title}\n   {link}\n   {desc}")
+
+        if not results:
+            for a_el in soup.select("h2 a, .b_title a"):
+                href = a_el.get("href", "")
+                title = a_el.get_text(strip=True)
+                if title and href.startswith("http"):
+                    results.append(f"{len(results) + 1}. {title}\n   {href}")
+
         if results:
-            for result in results:
-                # 寻找标题元素
-                title_elem = result.find('h2') or result.find('a')
-                
-                if title_elem:
-                    # 获取标题文本
-                    title = title_elem.get_text().strip()
-                    link_elem = result.find('a', href=True)
-                    link = link_elem.get('href', '') if link_elem else ''
-                    
-                    # 如果标题为空或链接为空，跳过此结果
-                    if not title.strip() or not link.strip():
-                        continue
-                    
-                    # 尝试获取摘要信息
-                    desc_elem = result.find('p', {'class': 'b_paractl'})
-                    if not desc_elem:
-                        desc_elem = result.find('div', {'class': 'b_caption'})
-                    if not desc_elem:
-                        desc_elem = result.find('p')
-                    
-                    desc = desc_elem.get_text().strip() if desc_elem else ""
-                    
-                    search_results.append({
-                        "title": title,
-                        "link": link,
-                        "desc": desc
-                    })
-        
-        # 如果以上选择器都没找到结果，尝试更通用的方法
-        if not search_results:
-            # 在必应页面中寻找搜索结果
-            links = soup.find_all('a', href=True)
-            for link in links:
-                href = link.get('href', '')
-                title = link.get_text().strip()
-                
-                # 检查是否是有效的搜索结果链接
-                if title and len(title) > 2 and ('/search?' not in href and 'bing.com' not in href):
-                    # 检查是否在搜索结果区域内
-                    parent = link.find_parent()
-                    if parent and ('b_algo' in parent.get('class', []) or 'b_result' in parent.get('class', [])):
-                        desc = "可能的相关结果"
-                        search_results.append({
-                            "title": title,
-                            "link": href,
-                            "desc": desc
-                        })
-        
-        if search_results:
-            result_str = ""
-            for i, result in enumerate(search_results[:5], 1):  # 只返回前5个结果
-                result_str += f"{i}. {result['title']}\n   Link: {result['link']}\n   Description: {result['desc']}\n"
-            return result_str.strip()
-        else:
-            return "未能找到搜索结果，请稍后再试。"
-            
+            return "\n".join(results[:10])
+        return f"搜索 '{query}' 未找到结果，请优化关键词"
+
     except requests.RequestException as e:
-        return f"网络请求错误: {str(e)}"
+        return f"网络请求错误: {e}"
     except Exception as e:
-        return f"搜索过程中发生错误: {str(e)}"
+        return f"搜索失败: {e}"
 
-def finish_tool(**kwargs):
-    """
-    结束任务
-    :return: 结束消息
-    """
-    return "任务完成"
 
-def weather_tool(**kwargs):
-    """
-    查询指定城市的天气信息
-    :param city: 城市名称
-    :return: 天气信息
-    """
+def web_content_tool(**kwargs) -> str:
+    """获取网页纯文本内容"""
+    urls = kwargs.get("urls")
+    if isinstance(urls, str):
+        urls = [urls]
+    if not urls or not isinstance(urls, list):
+        return "Error: 缺少参数 urls (URL 列表)"
+
+    all_parts = []
+    for i, url in enumerate(urls, 1):
+        try:
+            resp = requests.get(url, headers=_WEB_HEADERS, timeout=15, allow_redirects=True)
+            resp.raise_for_status()
+            if resp.apparent_encoding:
+                resp.encoding = resp.apparent_encoding
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside",
+                             "noscript", "iframe", "form"]):
+                tag.decompose()
+
+            main = (soup.select_one("main, article, .content, #content, .post, .article, [role='main']")
+                    or soup.body or soup)
+            text = main.get_text(separator="\n")
+            lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+            cleaned = "\n".join(lines)[:3000]
+
+            if len(lines) > 200:
+                cleaned = cleaned[:2500] + f"\n... (共 {len(lines)} 行，已截断)"
+
+            all_parts.append(f"=== 网页 {i}: {url} ===\n{cleaned}\n")
+        except requests.RequestException as e:
+            all_parts.append(f"=== 网页 {i}: {url} ===\nError: 请求失败: {e}\n")
+        except Exception as e:
+            all_parts.append(f"=== 网页 {i}: {url} ===\nError: {e}\n")
+
+    total = "\n".join(all_parts)
+    if len(total) > 10000:
+        total = total[:9000] + "\n... (超出长度限制，已截断)"
+    return total
+
+
+# ============================================================
+# 实用工具
+# ============================================================
+
+def talk_tool(**kwargs) -> str:
+    message = kwargs.get("message") or kwargs.get("content") or kwargs.get("text", "")
+    return message or "(空消息)"
+
+
+def finish_tool(**kwargs) -> str:
+    return kwargs.get("response", "任务完成")
+
+
+def weather_tool(**kwargs) -> str:
+    """天气查询 (wttr.in)"""
+    city = kwargs.get("city", "")
+    if not city:
+        return "Error: 缺少参数 city"
     try:
-        city = kwargs.get("city")
-        if not city:
-            return "错误: 缺少城市名称参数 'city'"
-        
-        # 使用免费的天气API - wttr.in
-        import urllib.parse
-        encoded_city = urllib.parse.quote(city.encode('utf-8'))
-        url = f"http://wttr.in/{encoded_city}?format=3"
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-        
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            weather_info = response.text.strip()
-            # 如果API返回的是错误信息，则给出提示
-            if "Unknown location" in weather_info or "Sorry" in weather_info:
-                return f"无法获取 {city} 的天气信息，请检查城市名称是否正确。"
-            return f"{city} 的天气: {weather_info}"
-        else:
-            # 如果API失败，返回错误信息
-            return f"获取 {city} 天气信息失败，状态码: {response.status_code}。可能的原因: 网络问题或API服务不可用。"
-    
-    except requests.RequestException as e:
-        return f"网络请求错误: {str(e)}"
+        fmt = "4" if kwargs.get("detail") else "3"
+        url = f"https://wttr.in/{requests.utils.quote(city)}?format={fmt}&lang=zh"
+        resp = requests.get(url, headers=_WEB_HEADERS, timeout=10)
+        if resp.status_code == 200:
+            text = resp.text.strip()
+            if "Unknown" in text or "Sorry" in text:
+                return f"找不到城市: {city}"
+            return text
+        return f"HTTP {resp.status_code}"
     except Exception as e:
-        return f"查询天气时发生错误: {str(e)}"
+        return f"Error: {e}"
+
+
+def speaking_tool(**kwargs) -> str:
+    """文字转语音"""
+    if pyttsx3 is None:
+        return "Error: pyttsx3 未安装"
+
+    text = kwargs.get("text", "")
+    if not text:
+        return "Error: 缺少参数 text"
+    try:
+        engine = pyttsx3.init()
+        engine.setProperty('rate', kwargs.get("rate", 150))
+        engine.setProperty('volume', kwargs.get("volume", 1.0))
+        engine.say(text)
+        engine.runAndWait()
+        return "语音播放成功"
+    except Exception as e:
+        return f"Error: 语音播放失败: {e}"
+
+
+def python_exec_tool(**kwargs) -> str:
+    """执行 Python 代码片段（隔离环境）"""
+    code = kwargs.get("code", "")
+    if not code:
+        return "Error: 缺少参数 code"
+
+    safe_globals = {
+        "__builtins__": {
+            "print": print, "len": len, "range": range, "int": int, "float": float,
+            "str": str, "bool": bool, "list": list, "dict": dict, "set": set,
+            "tuple": tuple, "enumerate": enumerate, "zip": zip, "map": map,
+            "filter": filter, "sorted": sorted, "reversed": reversed, "min": min,
+            "max": max, "sum": sum, "abs": abs, "round": round, "hash": hash,
+            "type": type, "isinstance": isinstance, "hasattr": hasattr,
+            "getattr": getattr, "Exception": Exception, "ValueError": ValueError,
+            "TypeError": TypeError, "KeyError": KeyError, "IndexError": IndexError,
+        },
+        "os": os, "sys": sys, "re": re, "json": __import__('json'),
+        "datetime": __import__('datetime'), "math": __import__('math'),
+        "Path": Path, "platform": platform,
+    }
+
+    import io as _io
+    try:
+        old_stdout = sys.stdout
+        captured = _io.StringIO()
+        sys.stdout = captured
+        try:
+            exec(code, safe_globals, {})
+        finally:
+            sys.stdout = old_stdout
+        output = captured.getvalue()
+        if output.strip():
+            return output.strip()[:3000]
+        return "(执行成功，无输出)"
+    except Exception as e:
+        return f"Error: {type(e).__name__}: {e}"
