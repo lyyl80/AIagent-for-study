@@ -63,6 +63,27 @@ class ChatBridge(QObject):
         self._current_memory = Memory()
         self._is_thinking = False
         self._worker = None
+        self._load_persisted_settings()
+
+    def _load_persisted_settings(self):
+        data = load_settings()
+        if data.get("env_var_name"):
+            ApiClient.env_var_name = data["env_var_name"]
+        if data.get("active_model"):
+            ApiClient.active_model = data["active_model"]
+        for key in data.get("custom_models", []):
+            ModelManager().add_custom_model(key)
+
+    def _persist_settings(self):
+        custom = []
+        for cat, models in ModelManager.available_models.items():
+            if cat == "自定义模型":
+                custom.extend(models.keys())
+        save_settings(
+            env_var_name=ApiClient.env_var_name,
+            active_model=ApiClient.active_model,
+            custom_models=custom,
+        )
 
     # ====== isThinking 属性 ======
     @Property(bool, notify=thinkingChanged)
@@ -322,8 +343,9 @@ class ChatBridge(QObject):
         
         Args:
             model (str): 模型标识符
-        """ 
+        """
         ApiClient.active_model = model
+        self._persist_settings()
 
     @Slot(str)
     def setApiEnvVarName(self, name):
@@ -338,6 +360,7 @@ class ChatBridge(QObject):
         """
         if name.strip():
             ApiClient.env_var_name = name.strip()
+            self._persist_settings()
 
     @Slot(str, str)
     def addCustomModel(self, key, name):
@@ -349,13 +372,9 @@ class ChatBridge(QObject):
             name (str): 模型显示名称
         """
         ModelManager().add_custom_model(key, name)
+        self._persist_settings()
 
     @Slot(str)
     def removeCustomModel(self, key):
-        """
-        移除自定义模型
-        
-        Args:
-            key (str): 要移除的模型标识符
-        """
         ModelManager().remove_custom_model(key)
+        self._persist_settings()

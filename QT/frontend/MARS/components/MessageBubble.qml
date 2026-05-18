@@ -10,21 +10,24 @@ Rectangle {
     property string toolName: ""
     property string toolResult: ""
     property bool needInput: false
+    property bool isNewMessage: false
 
     width: parent ? parent.width : 0
     implicitHeight: contentColumn.height + 8
     color: "transparent"
 
-    // 进入动画
-    property real opacityValue: 0
-    property real scaleValue: 0.95
+    // 仅新消息触发进入动画
+    property real opacityValue: isNewMessage ? 0 : 1
+    property real scaleValue: isNewMessage ? 0.95 : 1
 
-    Behavior on opacityValue { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
-    Behavior on scaleValue { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+    Behavior on opacityValue { enabled: root.isNewMessage; NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+    Behavior on scaleValue { enabled: root.isNewMessage; NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
 
     Component.onCompleted: {
-        opacityValue = 1
-        scaleValue = 1
+        if (isNewMessage) {
+            opacityValue = 1
+            scaleValue = 1
+        }
     }
 
     Column {

@@ -289,6 +289,7 @@ Rectangle {
                     message: modelData.message || ""
                     toolName: modelData.toolName || ""
                     toolResult: modelData.toolResult || ""
+                    isNewMessage: index === messageList.count - 1
                 }
 
                 ScrollBar.vertical: ScrollBar {
