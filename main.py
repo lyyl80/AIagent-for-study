@@ -137,24 +137,15 @@ def run_interactive_mode(verbose=False):
 
     # 初始化记忆系统和运行时环境
     memory = Memory(user_input="")
-    runtime = ConversationRuntime(
-        system_prompt=SystemPromptBuilder().build(),
-        max_iterations=100,
-        permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
-    )
 
-    def _new_runtime():
-        """
-        创建新的运行时实例
-        
-        Returns:
-            ConversationRuntime: 新配置的运行时对象
-        """
+    def _create_runtime():
         return ConversationRuntime(
             system_prompt=SystemPromptBuilder().build(),
             max_iterations=100,
             permission_policy=PermissionPolicy(PermissionMode.DANGER_FULL),
         )
+
+    runtime = _create_runtime()
 
     def save_msg(role, content, tool_name="", tool_args=""):
         """
@@ -210,7 +201,7 @@ def run_interactive_mode(verbose=False):
             # 清空会话
             if lower == "clear":
                 memory.clear()
-                runtime = _new_runtime()
+                runtime = _create_runtime()
                 print("会话已清空")
                 continue
 
@@ -257,7 +248,7 @@ def run_interactive_mode(verbose=False):
                 filename = raw[5:].strip()
                 try:
                     memory = Memory.load_session(filename)
-                    runtime = _new_runtime()
+                    runtime = _create_runtime()
                     runtime.messages = memory_to_runtime_messages(memory.history)
                     print(f"已加载会话: {filename}")
                 except Exception as e:

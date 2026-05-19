@@ -51,33 +51,16 @@ class ApiClient:
     def get_tool_definitions(self) -> List[ToolDefinition]:
         return [t for t in TOOL_DEFINITIONS if t.name not in self._disabled_tools]
 
+    @staticmethod
+    def _get_openai_client():
+        var_name = ApiClient.env_var_name
+        api_key = os.environ.get(var_name)
+        if not api_key:
+            raise Exception(f"未找到{var_name}环境变量")
+        return OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
     def get_model_by_key(self, model_key: str) -> Dict[str, Any]:
-        """
-        根据模型键获取模型详细信息
-        
-        遍历ModelManager的模型注册表，查找匹配的模型配置。
-        如果未找到，返回默认的本地模型作为后备。
-        
-        Args:
-            model_key (str): 模型标识符
-            
-        Returns:
-            Dict[str, Any]: 包含key、category、type、name的模型信息字典
-        """
-        for category, models in ModelManager.available_models.items():
-            if model_key in models:
-                return {
-                    "key": model_key, "category": category,
-                    "type": models[model_key]["type"],
-                    "name": models[model_key]["name"]
-                }
-        # 默认后备模型
-        default_key = "gpt-oss:20b"
-        return {
-            "key": default_key, "category": "本地模型",
-            "type": ModelManager.available_models["本地模型"][default_key]["type"],
-            "name": ModelManager.available_models["本地模型"][default_key]["name"]
-        }
+        return ModelManager().get_model_by_key(model_key)
 
     def stream(self, request: ApiRequest) -> tuple:
         raw_text = self._call_model_raw(request)
@@ -161,11 +144,7 @@ class ApiClient:
 
     def _call_cloud(self, model_key: str, messages: List[Dict], system: str,
                     tools: Optional[List[Dict]] = None) -> str:
-        var_name = ApiClient.env_var_name
-        api_key = os.environ.get(var_name)
-        if not api_key:
-            raise Exception(f"未找到{var_name}环境变量")
-        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        client = self._get_openai_client()
         full_messages = [{"role": "system", "content": system}] + messages
         kwargs = dict(model=model_key, messages=full_messages, stream=True, max_tokens=16384)
         if tools:
@@ -403,11 +382,7 @@ class ModelManager:
         """
         try:
             if model_info["type"] == "cloud":
-                var_name = ApiClient.env_var_name
-                api_key = os.environ.get(var_name)
-                if not api_key:
-                    raise Exception(f"未找到{var_name}环境变量")
-                client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+                client = ApiClient._get_openai_client()
                 full_messages = [{"role": "system", "content": system_prompt}] + messages
                 response = client.chat.completions.create(
                     model=model_info["key"], 
@@ -492,26 +467,17 @@ class ModelManager:
                 else:
                     return {"error": f"模型调用失败: {str(e)}", "raw_response": ""}, ""
 
-    def _clean_json(self, response):
-        """
-        清理LLM响应中的JSON内容
-        
-        移除Markdown代码块标记（```json ... ```），提取最外层的JSON对象。
-        
-        Args:
-            response (str): LLM的原始响应文本
-            
-        Returns:
-            str: 清理后的JSON字符串
-        """
+    @staticmethod
+    def _clean_json(response):
         cleaned = response.strip()
-        # 移除常见的代码块标记
-        for prefix, suffix in [("```json\n", "\n```"), ("```json", "```"), ("```\n", "\n```"), ("```", "```")]:
-            if cleaned.startswith(prefix) and cleaned.endswith(suffix):
-                cleaned = cleaned[len(prefix):-len(suffix)]
-                break
-        cleaned = cleaned.strip()
-        # 提取最外层的JSON对象
+        # 逐行剥离 Markdown 代码块标记
+        lines = cleaned.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+        # 提取最外层的 JSON 对象
         start = cleaned.find('{')
         end = cleaned.rfind('}')
         if start != -1 and end != -1 and end > start:

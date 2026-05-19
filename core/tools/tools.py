@@ -18,6 +18,9 @@ import shutil
 import stat
 import re
 import hashlib
+import time
+import fnmatch
+import json as _json_mod
 from pathlib import Path
 from typing import Any
 import requests
@@ -27,6 +30,27 @@ try:
     import pyttsx3
 except ImportError:
     pyttsx3 = None
+
+
+# ===================== 内部辅助函数 =====================
+
+def _get_file_path(kwargs: dict) -> str:
+    """从 kwargs 中提取文件路径，支持 file_path / path 两种键名"""
+    path = kwargs.get("file_path") or kwargs.get("path")
+    if not path:
+        raise ValueError("缺少参数 file_path")
+    return path
+
+
+def _validate_file_isfile(path: str) -> None:
+    """确认 path 是一个存在的文件，否则抛出异常"""
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"文件不存在: {path}")
+
+
+def _normalize_content(content: str) -> str:
+    """标准化行尾符：\r\r\n → \n, \r\n → \n"""
+    return content.replace('\r\r\n', '\n').replace('\r\n', '\n')
 
 
 def _auto_encode(file_path: str) -> str:
@@ -71,11 +95,11 @@ def read_file_tool(**kwargs) -> str:
     Returns:
         str: 文件内容或搜索结果，错误时返回错误信息
     """
-    file_path = kwargs.get("file_path") or kwargs.get("path")
-    if not file_path:
-        return "Error: 缺少参数 file_path"
-    if not os.path.isfile(file_path):
-        return f"Error: 文件不存在: {file_path}"
+    try:
+        file_path = _get_file_path(kwargs)
+        _validate_file_isfile(file_path)
+    except (ValueError, FileNotFoundError) as e:
+        return f"Error: {e}"
 
     try:
         # 检查文件大小限制
@@ -133,30 +157,26 @@ def write_file_tool(**kwargs) -> str:
     Returns:
         str: 成功消息或错误信息
     """
-    file_path = kwargs.get("file_path") or kwargs.get("path")
+    try:
+        file_path = _get_file_path(kwargs)
+    except ValueError as e:
+        return f"Error: {e}"
     content = kwargs.get("content")
-    if not file_path:
-        return "Error: 缺少参数 file_path"
     if content is None:
         return "Error: 缺少参数 content"
 
     try:
-        # 确保父目录存在
         os.makedirs(os.path.dirname(os.path.abspath(file_path)) or ".", exist_ok=True)
 
-        # 选择写入模式
         if kwargs.get("append"):
             mode = 'a'
         else:
             mode = 'w'
-            # 创建备份
             if kwargs.get("backup") and os.path.isfile(file_path):
-                bak = file_path + ".bak"
-                shutil.copy2(file_path, bak)
+                shutil.copy2(file_path, file_path + ".bak")
 
         with open(file_path, mode, encoding='utf-8') as f:
-            normalized = content.replace('\r\r\n', '\n').replace('\r\n', '\n')
-            f.write(normalized)
+            f.write(_normalize_content(content))
 
         size = os.path.getsize(file_path)
         return f"写入成功: {file_path} ({size} 字节)"
@@ -180,35 +200,34 @@ def replace_content_tool(**kwargs) -> str:
     Returns:
         str: 替换结果统计或错误信息
     """
-    file_path = kwargs.get("file_path") or kwargs.get("path")
+    try:
+        file_path = _get_file_path(kwargs)
+        _validate_file_isfile(file_path)
+    except (ValueError, FileNotFoundError) as e:
+        return f"Error: {e}"
+
     old_val = kwargs.get("old_content", "")
     new_val = kwargs.get("new_content", "")
-    if not file_path:
-        return "Error: 缺少参数 file_path"
+    use_regex = kwargs.get("regex", False)
+    count = int(kwargs.get("count", 0) or 0)
 
     try:
-        if not os.path.isfile(file_path):
-            return f"Error: 文件不存在: {file_path}"
         content = _auto_encode(file_path)
     except Exception as e:
         return f"Error: 读取文件失败: {e}"
 
-    use_regex = kwargs.get("regex", False)
-    count = int(kwargs.get("count", 0) or 0)
+    content = _normalize_content(content)
+    if not use_regex:
+        old_val = old_val.replace('\r\r\n', '\n').replace('\r\n', '\n')
 
-    # 标准化行尾（修复 \r\r\n 等异常换行符）
-    content = content.replace('\r\r\n', '\n').replace('\r\n', '\n')
-
-    # 正则替换模式
     if use_regex:
         try:
             new_content, n = re.subn(old_val, new_val, content, count=count if count > 0 else 0)
         except re.error as e:
             return f"Error: 正则表达式无效: {e}"
     else:
-        old_val = old_val.replace('\r\r\n', '\n').replace('\r\n', '\n')
         if old_val not in content:
-            return f"Error: 文件中未找到要替换的内容"
+            return "Error: 文件中未找到要替换的内容"
         if count > 1:
             new_content = content.replace(old_val, new_val, count)
             n = min(count, content.count(old_val))

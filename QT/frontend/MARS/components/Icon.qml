@@ -170,21 +170,18 @@ Item {
     Item {
         anchors.centerIn: parent; width: size; height: size
         visible: iconName === "tools-outline"
-        readonly property real s: size
-        readonly property real c: s * 0.22
-        readonly property real t: s * 0.09
-        Rectangle { x: c; y: 0; width: s - 2*c; height: t; color: iconColor; radius: 1 }
-        Rectangle { x: c; y: s - t; width: s - 2*c; height: t; color: iconColor; radius: 1 }
-        Rectangle { x: 0; y: c; width: t; height: s - 2*c; color: iconColor; radius: 1 }
-        Rectangle { x: s - t; y: c; width: t; height: s - 2*c; color: iconColor; radius: 1 }
+        Rectangle { x: size * 0.22; y: 0; width: size * 0.56; height: size * 0.09; color: iconColor; radius: 1 }
+        Rectangle { x: size * 0.22; y: size * 0.91; width: size * 0.56; height: size * 0.09; color: iconColor; radius: 1 }
+        Rectangle { x: 0; y: size * 0.22; width: size * 0.09; height: size * 0.56; color: iconColor; radius: 1 }
+        Rectangle { x: size * 0.91; y: size * 0.22; width: size * 0.09; height: size * 0.56; color: iconColor; radius: 1 }
         Rectangle {
-            x: c * 0.05; y: c * 0.05
-            width: c * 1.5; height: t
+            x: size * 0.01; y: size * 0.01
+            width: size * 0.33; height: size * 0.09
             rotation: 45; color: iconColor; radius: 1
         }
         Rectangle {
-            x: s - c * 1.55; y: s - c * 1.55
-            width: c * 1.5; height: t
+            x: size * 0.66; y: size * 0.66
+            width: size * 0.33; height: size * 0.09
             rotation: 45; color: iconColor; radius: 1
         }
     }

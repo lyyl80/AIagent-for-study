@@ -7,7 +7,7 @@
 - 对话消息结构
 - Token使用统计
 - API请求格式
-- 助手事件和轮次摘要
+- 轮次摘要
 
 使用dataclass提供简洁的数据结构定义。
 """
@@ -264,47 +264,6 @@ class ApiRequest:
     system: str = ""
     max_tokens: int = 4096
     tools: List[ToolDefinition] = field(default_factory=list)
-
-
-@dataclass
-class AssistantEvent:
-    """
-    助手事件类
-    
-    表示流式响应中的事件类型（文本增量或工具调用）。
-    
-    Attributes:
-        type (str): 事件类型
-    """
-    type: str
-
-    @classmethod
-    def text_delta(cls, text: str) -> 'AssistantEvent':
-        """
-        创建文本增量事件
-        
-        Args:
-            text (str): 新增的文本内容
-            
-        Returns:
-            AssistantEvent: 文本增量事件对象
-        """
-        return cls(type="text_delta", text=text)  # type: ignore
-
-    @classmethod
-    def tool_use(cls, id: str, name: str, input: Dict[str, Any]) -> 'AssistantEvent':
-        """
-        创建工具调用事件
-        
-        Args:
-            id (str): 工具调用ID
-            name (str): 工具名称
-            input (Dict[str, Any]): 工具参数
-            
-        Returns:
-            AssistantEvent: 工具调用事件对象
-        """
-        return cls(type="tool_use", id=id, name=name, input=input)  # type: ignore
 
 
 @dataclass

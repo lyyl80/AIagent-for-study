@@ -18,7 +18,7 @@ import time
 
 from core.runtime.types import (
     ConversationMessage, MessageRole, TextBlock, ToolUse, ToolResult,
-    ContentBlock, TokenUsage, AssistantEvent, TurnSummary,
+    ContentBlock, TokenUsage, TurnSummary,
     ApiRequest, ToolDefinition, ContentBlockType
 )
 from core.runtime.usage import UsageTracker

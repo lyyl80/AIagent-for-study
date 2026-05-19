@@ -10,7 +10,7 @@ Runtime模块导出
 """
 from .types import (
     ConversationMessage, MessageRole, TextBlock, ToolUse, ToolResult,
-    ContentBlock, TokenUsage, AssistantEvent, TurnSummary,
+    ContentBlock, TokenUsage, TurnSummary,
     ApiRequest, ToolDefinition,
 )
 from .conversation import ConversationRuntime
