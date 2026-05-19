@@ -1,5 +1,5 @@
 {
   "env_var_name": "DEEPSEEK_API_KEY",
-  "active_model": "gpt-oss:20b",
+  "active_model": "deepseek-v4-flash",
   "custom_models": {}
 }
