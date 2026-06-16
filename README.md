@@ -304,6 +304,7 @@ run_turn() 调用
 | 🟡 WORKSPACE_WRITE | 2 | 工作区写入权限 |
 | 🟠 DANGER_FULL | 3 | 危险操作权限 |
 | 🔴 ALL | 4 | 完全控制 |
+ 待续
 
 ---
 
