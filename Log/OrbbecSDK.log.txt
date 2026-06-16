@@ -1,0 +1,24 @@
+[05/28 23:47:42.855733][info][9380][DeviceManager.cpp:25] Current found device(s): (0)
+[05/28 23:47:42.855973][info][9380][DeviceManager.cpp:405] Enable net device enumeration: true
+[05/28 23:47:43.891997][info][9380][DeviceManager.cpp:25] Current device(s) list: (0)
+[05/28 23:48:21.668623][warning][29720][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Entity not found. Try again
+[05/28 23:48:21.732140][warning][29720][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Entity not found), skipping, info.serial and infName may be empty
+[05/28 23:48:21.732427][warning][29720][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Operation not supported or unimplemented on this platform. Try again
+[05/28 23:48:21.793501][warning][29720][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Operation not supported or unimplemented on this platform), skipping, info.serial and infName may be empty
+[05/28 23:48:21.794726][info][29720][DeviceManager.cpp:25] Current found device(s): (0)
+[05/28 23:48:21.794755][info][29720][DeviceManager.cpp:405] Enable net device enumeration: true
+[05/28 23:48:22.828196][info][29720][DeviceManager.cpp:25] Current device(s) list: (0)
+[05/28 23:49:07.876886][warning][13092][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Entity not found. Try again
+[05/28 23:49:07.928458][warning][13092][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Entity not found), skipping, info.serial and infName may be empty
+[05/28 23:49:07.928596][warning][13092][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Operation not supported or unimplemented on this platform. Try again
+[05/28 23:49:07.990092][warning][13092][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Operation not supported or unimplemented on this platform), skipping, info.serial and infName may be empty
+[05/28 23:49:07.991020][info][13092][DeviceManager.cpp:25] Current found device(s): (0)
+[05/28 23:49:07.991043][info][13092][DeviceManager.cpp:405] Enable net device enumeration: true
+[05/28 23:49:09.027859][info][13092][DeviceManager.cpp:25] Current device(s) list: (0)
+[05/28 23:49:33.026784][warning][14084][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Entity not found. Try again
+[05/28 23:49:33.080955][warning][14084][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Entity not found), skipping, info.serial and infName may be empty
+[05/28 23:49:33.081128][warning][14084][UsbEnumeratorLibusb.cpp:398] Failed to open USB device: error=Operation not supported or unimplemented on this platform. Try again
+[05/28 23:49:33.142627][warning][14084][UsbEnumeratorLibusb.cpp:407] Failed to open USB device (Operation not supported or unimplemented on this platform), skipping, info.serial and infName may be empty
+[05/28 23:49:33.143462][info][14084][DeviceManager.cpp:25] Current found device(s): (0)
+[05/28 23:49:33.143491][info][14084][DeviceManager.cpp:405] Enable net device enumeration: true
+[05/28 23:49:34.179869][info][14084][DeviceManager.cpp:25] Current device(s) list: (0)
