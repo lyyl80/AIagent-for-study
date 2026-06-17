@@ -11,7 +11,7 @@ Rectangle {
     property bool isThinking: false
     property bool sidebarVisible: false
     property var sessionList: []
-    property var chatModel: []
+    property var chatModel: ListModel {}
 
     color: theme ? theme.bgColor : "#1b1b1b"
 
@@ -299,15 +299,15 @@ Rectangle {
                 spacing: 4
                 cacheBuffer: 200
 
-                onCountChanged: positionViewAtEnd()
+                onCountChanged: Qt.callLater(positionViewAtEnd)
 
                 delegate: MessageBubble {
                     width: messageList.width
                     theme: root.theme
-                    sender: modelData.sender || "user"
-                    message: modelData.message || ""
-                    toolName: modelData.toolName || ""
-                    toolResult: modelData.toolResult || ""
+                    sender: model.sender || "user"
+                    message: model.message || ""
+                    toolName: model.toolName || ""
+                    toolResult: model.toolResult || ""
                     isNewMessage: index === messageList.count - 1
                 }
 

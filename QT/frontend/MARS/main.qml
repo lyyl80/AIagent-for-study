@@ -58,7 +58,7 @@ Window {
 
                 onNewSession: function() {
                     chatBridge.newSession()
-                    chatPage.chatModel = []
+                    chatPage.chatModel.clear()
                     chatBridge.refreshSessions()
                 }
 
@@ -86,37 +86,36 @@ Window {
 
                 function onMessageReceived(sender, text) {
                     if (sender === "ai" && text.includes("[等待用户输入...]")) {
-                        if (chatPage.chatModel.length > 0) {
-                            var lastMsg = chatPage.chatModel[chatPage.chatModel.length - 1]
-                            if (lastMsg.sender === "ai") {
-                                lastMsg.needInput = true
-                                chatPage.chatModel = chatPage.chatModel.slice()
+                        if (chatPage.chatModel.count > 0) {
+                            var lastIdx = chatPage.chatModel.count - 1
+                            if (chatPage.chatModel.get(lastIdx).sender === "ai") {
+                                chatPage.chatModel.setProperty(lastIdx, "needInput", true)
                                 return
                             }
                         }
                     }
 
-                    chatPage.chatModel = chatPage.chatModel.concat([{
+                    chatPage.chatModel.append({
                         sender: sender,
                         message: text,
                         toolName: "",
                         toolResult: "",
                         needInput: false
-                    }])
+                    })
                 }
 
                 function onToolCalled(toolName, args, result) {
-                    chatPage.chatModel = chatPage.chatModel.concat([{
+                    chatPage.chatModel.append({
                         sender: "ai",
                         message: "",
                         toolName: toolName,
                         toolResult: result,
                         needInput: false
-                    }])
+                    })
                 }
 
                 function onErrorOccurred(message) {
-                    chatPage.chatModel = chatPage.chatModel.concat([{ sender: "ai", message: "\u26A0\uFE0F " + message }])
+                    chatPage.chatModel.append({ sender: "ai", message: "\u26A0\uFE0F " + message })
                 }
 
                 function onThinkingChanged(isThinking) {
@@ -128,7 +127,7 @@ Window {
                 }
 
                 function onSessionLoaded(filename) {
-                    chatPage.chatModel = []
+                    chatPage.chatModel.clear()
                 }
             }
         }
