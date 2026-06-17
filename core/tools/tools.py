@@ -23,9 +23,12 @@ import fnmatch
 import json as _json_mod
 from pathlib import Path
 from typing import Any
+import serial
 import requests
 from bs4 import BeautifulSoup
 import chardet
+import serial
+import time
 try:
     import pyttsx3
 except ImportError:
@@ -763,6 +766,7 @@ def python_exec_tool(**kwargs) -> str:
         return "Error: 缺少参数 code"
 
     # 定义安全的命名空间，限制可用功能
+    _real_builtins = __builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__
     safe_globals = {
         "__builtins__": {
             "print": print, "len": len, "range": range, "int": int, "float": float,
@@ -774,6 +778,7 @@ def python_exec_tool(**kwargs) -> str:
             "getattr": getattr, "Exception": Exception, "ValueError": ValueError,
             "TypeError": TypeError, "KeyError": KeyError, "IndexError": IndexError,
             "open": open, "__import__": __import__,
+            "__orig_import__": _real_builtins.get("__orig_import__", __import__),
         },
         "os": os, "sys": sys, "re": re, "json": __import__('json'),
         "datetime": __import__('datetime'), "math": __import__('math'),
@@ -796,3 +801,78 @@ def python_exec_tool(**kwargs) -> str:
         return "(执行成功，无输出)"
     except Exception as e:
         return f"Error: {type(e).__name__}: {e}"
+    
+def load_skill_tool(**kwargs) -> str:
+    """
+    加载技能(skill)完整内容
+
+    按名称加载 SKILL.md 全文到对话中，帮助 AI 按标准流程执行任务。
+
+    Args:
+        name (str): 技能名称
+
+    Returns:
+        str: SKILL.md 完整内容或错误信息
+    """
+    from core.skills import SkillManager
+    name = kwargs.get("name", "")
+    if not name:
+        return "Error: 缺少参数 name"
+    mgr = SkillManager()
+    skill = mgr.find(name)
+    if skill is None:
+        available = ", ".join(s["name"] for s in mgr.scan())
+        return f"Error: 未找到 skill '{name}'\n可用技能: {available}"
+    content = mgr.load(name)
+    if content is None:
+        return f"Error: 读取 skill '{name}' 失败"
+    return content
+
+
+def serial_send_tool(**kwargs) -> str:
+    """
+    串口发送工具
+    
+    Args:
+        port (str): 串口名称
+        baudrate (int): 波特率
+        data (str): 要发送的数据
+        encoding (str): 数据编码方式，可选"text"或"hex"
+        timeout (float): 读取响应的超时时间
+        read_response (bool): 是否读取响应数据
+        
+    Returns:
+        str: 执行结果或错误信息
+    """
+    port = kwargs.get("port", "COM5") # 默认串口名称    
+    baudrate = kwargs.get("baudrate", 115200)
+    data = kwargs.get("data", "")
+    if not data:
+        return "Error: 缺少参数 data"
+    encoding = kwargs.get("encoding", "text")
+    timeout = float(kwargs.get("timeout", 1.0))
+    read_response = kwargs.get("read_response", False)
+
+    try:
+        payload = bytes.fromhex(data) if encoding == "hex" else data.encode("utf-8")
+    except ValueError as e:
+        return f"Error: hex 格式错误: {e}"
+    try:
+        ser = serial.Serial(port, baudrate, timeout=timeout)
+        ser.write(payload)
+        result = f"已发送 {len(payload)} 字节到 {port}@{baudrate}"
+        if read_response:
+            time.sleep(0.1)
+            response = ser.read_all().decode("utf-8", errors="replace")
+            if response:
+                result += f"\n响应: {response}"
+        ser.close()
+        return result
+    except serial.SerialException as e:
+        return f"Error: 串口错误: {e}"
+
+
+    
+
+
+

@@ -49,6 +49,7 @@ class SystemPromptBuilder:
         self._add_device_info()     # 设备信息
         self._add_rules()           # 核心规则
         self._add_tool_usage()      # 工具使用说明
+        self._add_available_skills()  # 可用技能列表
         self._add_output_format()   # 输出格式要求
         return "\n".join(self._sections)
 
@@ -80,6 +81,7 @@ class SystemPromptBuilder:
         self._sections.append("4. 连续5次不同工具合理尝试仍失败，且已用 talk 与用户确认需求后，才可使用 finish")
         self._sections.append("5. 不确定时立即用 talk 询问用户，绝不输出空工具名")
         self._sections.append("6. 绝不伪造运行结果，不假设未验证的文件内容")
+        self._sections.append("7. 任务匹配「可用技能」列表中的某个技能时，先调用 load_skill 加载完整指南，再按指南步骤执行，禁止自行猜测协议或翻文件")
 
     def _add_tool_usage(self):
         d = self._disabled_tools
@@ -100,8 +102,24 @@ class SystemPromptBuilder:
             self._sections.append("- 文件管理 → create_directory/delete_path/copy_move/file_info")
         if "python_exec" not in d:
             self._sections.append("- Python执行 → python_exec, tool_args: {\"code\": \"...\"}")
+        if "serial_send" not in d:
+            self._sections.append("- 串口通信 → serial_send, tool_args: {\"data\": \"指令文本\", \"port\": \"COM5\", \"baudrate\": 115200}")
+        if "load_skill" not in d:
+            self._sections.append("- 加载技能指南 → load_skill, tool_args: {\"name\": \"技能名称\"}（技能包含完整操作流程）")
         if "finish" not in d:
             self._sections.append("- 任务完全结束 → finish, tool_args: {\"response\": \"完成说明\"}")
+
+    def _add_available_skills(self):
+        try:
+            from core.skills import SkillManager
+            skills = SkillManager().scan()
+            if skills:
+                self._sections.append("## 可用技能（按需加载）")
+                for s in skills:
+                    self._sections.append(f"- {s['name']}: {s['description']}")
+                self._sections.append("调用 load_skill(name=\"技能名\") 加载完整操作指南")
+        except Exception:
+            pass
 
     def _add_output_format(self):
         """添加输出格式和完成条件"""

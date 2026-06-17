@@ -29,15 +29,24 @@ class PermissionMode(IntEnum):
 # 工具权限映射表
 # 将每个工具映射到所需的最低权限级别
 TOOL_PERMISSIONS = {
-    "read_file": PermissionMode.READ_ONLY,       # 读取文件
-    "web_search": PermissionMode.READ_ONLY,      # 网络搜索
-    "web_content": PermissionMode.READ_ONLY,     # 获取网页内容
-    "shell": PermissionMode.DANGER_FULL,         # Shell命令执行（危险）
-    "write_file": PermissionMode.WORKSPACE_WRITE,  # 写入文件
-    "replace_content": PermissionMode.WORKSPACE_WRITE,  # 替换文件内容
-    "talk": PermissionMode.READ_ONLY,            # 对话回复
-    "finish": PermissionMode.READ_ONLY,          # 完成任务
-    "speaking": PermissionMode.READ_ONLY,        # 语音合成
+    "read_file": PermissionMode.READ_ONLY,
+    "web_search": PermissionMode.READ_ONLY,
+    "web_content": PermissionMode.READ_ONLY,
+    "shell": PermissionMode.DANGER_FULL,
+    "write_file": PermissionMode.WORKSPACE_WRITE,
+    "replace_content": PermissionMode.WORKSPACE_WRITE,
+    "talk": PermissionMode.READ_ONLY,
+    "finish": PermissionMode.READ_ONLY,
+    "speaking": PermissionMode.READ_ONLY,
+    "list_directory": PermissionMode.READ_ONLY,
+    "grep_files": PermissionMode.READ_ONLY,
+    "file_info": PermissionMode.READ_ONLY,
+    "create_directory": PermissionMode.WORKSPACE_WRITE,
+    "delete_path": PermissionMode.WORKSPACE_WRITE,
+    "copy_move": PermissionMode.WORKSPACE_WRITE,
+    "python_exec": PermissionMode.DANGER_FULL,
+    "serial_send": PermissionMode.DANGER_FULL,
+    "load_skill": PermissionMode.READ_ONLY,
 }
 
 
