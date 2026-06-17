@@ -159,7 +159,10 @@ class ChatBridge(QObject):
             args (str): 工具参数字符串
             result (str): 工具执行结果
         """
-        self.toolCalled.emit(tool_name, args, result)
+        if tool_name in ("talk", "finish"):
+            self.messageReceived.emit("ai", result)
+        else:
+            self.toolCalled.emit(tool_name, args, result)
 
     def _on_step_completed(self, current, total):
         """
