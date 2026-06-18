@@ -12,6 +12,7 @@ Item {
 
     readonly property var navItems: [
         { icon: "chat", label: "对话" },
+        { icon: "camera", label: "视觉" },
         { icon: "tools", label: "工具" },
         { icon: "settings", label: "设置" }
     ]

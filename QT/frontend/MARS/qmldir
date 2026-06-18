@@ -10,3 +10,4 @@ Icon 1.0 components/Icon.qml
 ChatPage 1.0 pages/ChatPage.qml
 ToolsPage 1.0 pages/ToolsPage.qml
 SettingsPage 1.0 pages/SettingsPage.qml
+VisionPage 1.0 pages/VisionPage.qml

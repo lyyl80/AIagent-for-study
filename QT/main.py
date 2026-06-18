@@ -27,6 +27,7 @@ from PySide6.QtCore import QUrl, Qt, QRect
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication, QSplashScreen
 from backend.chat_bridge import ChatBridge
+from backend.vision_bridge import VisionBridge, CameraImageProvider
 
 
 def make_splash_pixmap():
@@ -77,6 +78,12 @@ if __name__ == "__main__":
     bridge = ChatBridge()
     engine.rootContext().setContextProperty("chatBridge", bridge)
 
+    camera_provider = CameraImageProvider()
+    engine.addImageProvider("camera", camera_provider)
+
+    vision_bridge = VisionBridge(camera_provider)
+    engine.rootContext().setContextProperty("visionBridge", vision_bridge)
+
     engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
 
     qml_path = os.path.join(os.path.dirname(__file__), "frontend", "MARS", "main.qml")
@@ -85,6 +92,8 @@ if __name__ == "__main__":
     if not engine.rootObjects():
         splash.close()
         sys.exit(-1)
+
+    vision_bridge.start()
 
     splash.close()
     sys.exit(app.exec())

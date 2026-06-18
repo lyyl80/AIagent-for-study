@@ -67,6 +67,13 @@ Window {
                 }
             }
 
+            VisionPage {
+                id: visionPage
+                theme: root.theme
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+
             ToolsPage {
                 id: toolsPage
                 theme: root.theme

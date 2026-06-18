@@ -186,6 +186,36 @@ Item {
         }
     }
 
+    // Camera (摄像头) — 简约相机
+    Item {
+        anchors.centerIn: parent; width: size; height: size
+        visible: iconName === "camera"
+        Rectangle {
+            anchors.centerIn: parent
+            width: size * 0.75; height: size * 0.55
+            radius: size * 0.08
+            color: "transparent"
+            border.color: iconColor; border.width: 2
+        }
+        Rectangle {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -size * 0.02
+            width: size * 0.28; height: size * 0.28
+            radius: size * 0.14
+            color: "transparent"
+            border.color: iconColor; border.width: 2
+        }
+        Rectangle {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: size * 0.08
+            anchors.rightMargin: size * 0.08
+            width: size * 0.12; height: size * 0.08
+            radius: size * 0.02
+            color: iconColor
+        }
+    }
+
     // Settings (设置) — 简约齿轮
     Item {
         anchors.centerIn: parent; width: size; height: size
