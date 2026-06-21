@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
     vision_bridge = VisionBridge(camera_provider)
     engine.rootContext().setContextProperty("visionBridge", vision_bridge)
+    app.aboutToQuit.connect(vision_bridge.stop)
 
     engine.addImportPath(os.path.join(os.path.dirname(__file__), "frontend"))
 

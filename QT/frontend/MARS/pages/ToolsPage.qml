@@ -46,7 +46,6 @@ Rectangle {
                     }
 
                     Label {
-                        anchors.verticalCenter: parent.verticalCenter
                         text: "工具"
                         font.pixelSize: 14
                         font.bold: true
