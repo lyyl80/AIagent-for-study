@@ -587,17 +587,28 @@ Rectangle {
             Layout.fillHeight: true
             spacing: 0
 
-            // 头栏 — 仅标题文字，无背景遮挡
+            // 头栏 — 半透明胶囊式标题
             Item {
                 id: chatHeader
                 height: 40
                 width: parent.width
 
+                // 胶囊背景（用 x/y 定位，不依赖 Column 的 anchor 布局）
+                Rectangle {
+                    id: capsuleBg
+                    height: parent.height
+                    radius: height / 2
+                    width: titleRow.width + 40
+                    x: 8
+                    color: theme ? theme.cardColor : "#FFFFFF"
+                    opacity: 0.8
+                    border.color: theme ? Qt.rgba(0,0,0,0.08) : Qt.rgba(0,0,0,0.06)
+                    border.width: 1
+                }
+
                 Row {
                     id: titleRow
-                    anchors.left: parent.left
-                    anchors.leftMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.centerIn: capsuleBg
                     spacing: 8
 
                     // 菜单按钮（侧边栏隐藏时显示）
