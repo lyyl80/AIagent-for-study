@@ -5,20 +5,38 @@ import MARS 1.0
 import "../components"
 
 /**
- * ToolsPage — Apple 设置风格工具页面
- * 圆角卡片网格、Apple Toggle 开关
+ * ToolsPage — 工具管理页面
+ * 圆角卡片网格，支持单个工具开关和批量操作
  */
 Rectangle {
     id: root
 
     property var theme: null
-    property var tools: []
 
     color: theme ? theme.bgColor : "#F2F2F7"
 
-    Component.onCompleted: {
-        tools = chatBridge.getTools()
+    ListModel { id: toolModel }
+
+    function checkAllEnabled(val) {
+        for (var i = 0; i < toolModel.count; i++)
+            if (toolModel.get(i).enabled !== val) return false
+        return toolModel.count > 0
     }
+
+    function checkAnyEnabled() {
+        for (var i = 0; i < toolModel.count; i++)
+            if (toolModel.get(i).enabled) return true
+        return false
+    }
+
+    function refreshTools() {
+        toolModel.clear()
+        var arr = chatBridge.getTools()
+        for (var i = 0; i < arr.length; i++)
+            toolModel.append(arr[i])
+    }
+
+    Component.onCompleted: refreshTools()
 
     ColumnLayout {
         anchors.fill: parent
@@ -64,7 +82,7 @@ Rectangle {
                 spacing: 4
 
                 Label {
-                    text: "共计 " + root.tools.length + " 个"
+                    text: "共计 " + toolModel.count + " 个"
                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                     font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                     color: theme ? theme.secondaryText : "#8E8E93"
@@ -92,9 +110,9 @@ Rectangle {
                         font.pixelSize: theme ? theme.fontSizeCaption : 11
                         font.weight: theme ? theme.fontWeightMedium : Font.Medium
                         font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
-                        color: parent.hovered && root.tools.some(function(t) { return !t.enabled })
+                        color: parent.hovered && !checkAllEnabled(true)
                                ? (theme ? theme.accentColor : "#AF52DE")
-                               : (root.tools.some(function(t) { return !t.enabled })
+                               : (!checkAllEnabled(true)
                                   ? (theme ? theme.secondaryText : "#8E8E93")
                                   : (theme ? theme.tertiaryText : "#C7C7CC"))
                     }
@@ -103,14 +121,14 @@ Rectangle {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         hoverEnabled: true
-                        enabled: root.tools.some(function(t) { return !t.enabled })
+                        enabled: !checkAllEnabled(true)
                         onEntered: parent.hovered = true
                         onExited: parent.hovered = false
                         onClicked: {
-                            for (var i = 0; i < root.tools.length; i++) {
-                                chatBridge.setToolEnabled(root.tools[i].name, true)
+                            for (var i = 0; i < toolModel.count; i++) {
+                                chatBridge.setToolEnabled(toolModel.get(i).name, true)
                             }
-                            root.tools = chatBridge.getTools()
+                            refreshTools()
                         }
                     }
                 }
@@ -136,9 +154,9 @@ Rectangle {
                         font.pixelSize: theme ? theme.fontSizeCaption : 11
                         font.weight: theme ? theme.fontWeightMedium : Font.Medium
                         font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
-                        color: parent.hovered && root.tools.some(function(t) { return t.enabled })
+                        color: parent.hovered && checkAnyEnabled()
                                ? (theme ? theme.accentColor : "#AF52DE")
-                               : (root.tools.some(function(t) { return t.enabled })
+                               : (checkAnyEnabled()
                                   ? (theme ? theme.secondaryText : "#8E8E93")
                                   : (theme ? theme.tertiaryText : "#C7C7CC"))
                     }
@@ -147,14 +165,14 @@ Rectangle {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         hoverEnabled: true
-                        enabled: root.tools.some(function(t) { return t.enabled })
+                        enabled: checkAnyEnabled()
                         onEntered: parent.hovered = true
                         onExited: parent.hovered = false
                         onClicked: {
-                            for (var i = 0; i < root.tools.length; i++) {
-                                chatBridge.setToolEnabled(root.tools[i].name, false)
+                            for (var i = 0; i < toolModel.count; i++) {
+                                chatBridge.setToolEnabled(toolModel.get(i).name, false)
                             }
-                            root.tools = chatBridge.getTools()
+                            refreshTools()
                         }
                     }
                 }
@@ -167,7 +185,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: root.tools
+            model: toolModel
 
             property int cardWidth: 320
             property int cardHeight: 168
@@ -191,7 +209,7 @@ Rectangle {
                 width: grid.cellWidth - grid.cardGap
                 height: grid.cardHeight
                 theme: root.theme
-                cardTitle: modelData.name
+                cardTitle: model.name
                 cardBorder: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.06)
                 opacity: toolSwitch.checked ? 1.0 : 0.6
 
@@ -209,7 +227,7 @@ Rectangle {
                     property bool checked: false
 
                     Component.onCompleted: {
-                        checked = modelData.enabled
+                        checked = model.enabled
                     }
 
                     // 背景轨道
@@ -248,9 +266,10 @@ Rectangle {
 
                     TapHandler {
                         onTapped: {
-                            toolSwitch.checked = !toolSwitch.checked
-                            chatBridge.setToolEnabled(modelData.name, toolSwitch.checked)
-                            modelData.enabled = toolSwitch.checked
+                            var newVal = !model.enabled
+                            toolModel.setProperty(index, "enabled", newVal)
+                            toolSwitch.checked = newVal
+                            chatBridge.setToolEnabled(model.name, newVal)
                         }
                     }
                 }
@@ -281,7 +300,7 @@ Rectangle {
 
                         Label {
                             width: parent.width
-                            text: modelData.description
+                            text: model.description
                             font.pixelSize: theme ? theme.fontSizeBody : 13
                             font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                             color: theme ? theme.secondaryText : "#8E8E93"
@@ -297,7 +316,7 @@ Rectangle {
                         // 必需参数标签
                         Row {
                             spacing: 6
-                            visible: modelData.required_params !== ""
+                            visible: model.required_params !== ""
 
                             Rectangle {
                                 height: requiredLabel.implicitHeight + 6
@@ -308,7 +327,7 @@ Rectangle {
                                 Label {
                                     id: requiredLabel
                                     anchors.centerIn: parent
-                                    text: modelData.required_params
+                                    text: model.required_params
                                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                                     font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                                     color: "#FF3B30"
@@ -320,7 +339,7 @@ Rectangle {
                         // 可选参数标签
                         Row {
                             spacing: 6
-                            visible: modelData.optional_params !== ""
+                            visible: model.optional_params !== ""
 
                             Rectangle {
                                 height: optionalLabel.implicitHeight + 6
@@ -331,7 +350,7 @@ Rectangle {
                                 Label {
                                     id: optionalLabel
                                     anchors.centerIn: parent
-                                    text: modelData.optional_params
+                                    text: model.optional_params
                                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                                     font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                                     color: theme ? theme.secondaryText : "#8E8E93"

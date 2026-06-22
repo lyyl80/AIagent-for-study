@@ -5,8 +5,8 @@ import MARS 1.0
 import "../components"
 
 /**
- * VisionPage — Apple 风格视觉页面
- * 药丸形状态徽章、Apple 系统色
+ * VisionPage — 视觉数据页面
+ * 显示摄像头画面，带连接状态指示和目标计数徽章
  */
 Rectangle {
     id: root
@@ -28,17 +28,17 @@ Rectangle {
             id: cameraImage
             anchors.fill: parent
             anchors.margins: 1
-            source: "image://camera/feed?" + visionBridge.frameCount
+            source: visionBridge ? "image://camera/feed?" + visionBridge.frameCount : ""
             fillMode: Image.PreserveAspectFit
             clip: true
-            visible: visionBridge.connected
+            visible: visionBridge && visionBridge.connected
         }
 
         // 空状态
         Column {
             anchors.centerIn: parent
             spacing: 12
-            visible: !cameraImage.visible || !visionBridge.connected
+            visible: !cameraImage.visible || !(visionBridge && visionBridge.connected)
 
             Icon {
                 iconName: "camera"
@@ -48,7 +48,7 @@ Rectangle {
             }
 
             Label {
-                text: visionBridge.connected ? "等待视觉数据..." : "未连接 - 等待发送端..."
+                text: visionBridge && visionBridge.connected ? "等待视觉数据..." : "未连接 - 等待发送端..."
                 font.pixelSize: theme ? theme.fontSizeBody : 13
                 font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                 color: theme ? theme.secondaryText : "#8E8E93"
@@ -65,9 +65,9 @@ Rectangle {
             height: 28
             width: statusRow.width + 20
             radius: 14
-            color: visionBridge.connected
-                   ? Qt.rgba(0.204, 0.780, 0.349, 0.15)   // Apple Green 15%
-                   : Qt.rgba(1.0, 0.231, 0.188, 0.15)     // Apple Red 15%
+            color: visionBridge && visionBridge.connected
+                   ? Qt.rgba(0.204, 0.780, 0.349, 0.15)
+                   : Qt.rgba(1.0, 0.231, 0.188, 0.15)
 
             Row {
                 id: statusRow
@@ -79,7 +79,7 @@ Rectangle {
                     width: 8
                     height: 8
                     radius: 4
-                    color: visionBridge.connected ? "#30D059" : "#FF3B30"
+                    color: visionBridge && visionBridge.connected ? "#30D059" : "#FF3B30"
 
                     // 呼吸动画
                     SequentialAnimation on opacity {
@@ -90,11 +90,11 @@ Rectangle {
                 }
 
                 Label {
-                    text: visionBridge.connected ? "已连接" : "断开"
+                    text: visionBridge && visionBridge.connected ? "已连接" : "断开"
                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                     font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
                     font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
-                    color: visionBridge.connected ? "#24A040" : "#FF3B30"
+                    color: visionBridge && visionBridge.connected ? "#24A040" : "#FF3B30"
                 }
             }
         }
@@ -108,7 +108,7 @@ Rectangle {
             height: 28
             width: targetRow.width + 20
             radius: 14
-            visible: visionBridge.connected && visionBridge.targetCount > 0
+            visible: visionBridge && visionBridge.connected && visionBridge.targetCount > 0
             color: Qt.rgba(0.686, 0.322, 0.870, 0.15)   // Accent 15%
 
             Row {
@@ -126,7 +126,7 @@ Rectangle {
                 }
 
                 Label {
-                    text: visionBridge.targetCount + " 个"
+                    text: (visionBridge ? visionBridge.targetCount : 0) + " 个"
                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                     font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
                     font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
@@ -144,7 +144,7 @@ Rectangle {
             height: 24
             width: fpsLabel.width + 16
             radius: 12
-            visible: visionBridge.connected
+            visible: visionBridge && visionBridge.connected
             color: Qt.rgba(0, 0, 0, 0.5)
 
             Label {

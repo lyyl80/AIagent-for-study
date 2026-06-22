@@ -249,7 +249,6 @@ class ChatBridge(QObject):
                     pass  # 用户消息不需要重复显示
                     i += 1
                 else:
-                    # 收集连续的工具调用
                     tools = [{"name": tool, "result": output}]
                     j = i + 1
                     while j < len(self._current_memory.history):
@@ -261,17 +260,16 @@ class ChatBridge(QObject):
                                 tools.append({"name": next_tool, "result": next_output})
                                 j += 1
                                 continue
-                    break
-                    
+                        break
+
                     if len(tools) == 1:
                         args = entry.get("input", {}).get("tool_args", {})
                         self.toolCalled.emit(tools[0]["name"], str(args), tools[0]["result"])
                     else:
-                        # 作为组发射，QML 端会自动合并
                         self.toolCalled.emit(tools[0]["name"], "", tools[0]["result"])
                         for k in range(1, len(tools)):
                             self.toolCalled.emit(tools[k]["name"], "", tools[k]["result"])
-                    
+
                     i = j
             else:
                 role = entry.get("role", "")

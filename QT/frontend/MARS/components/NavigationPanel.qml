@@ -5,8 +5,8 @@ import MARS 1.0
 import "../components"
 
 /**
- * NavigationPanel — Apple 风格侧边栏
- * 半透明背景、圆角选中态、Sun/Moon 暗色切换
+ * NavigationPanel — 导航侧边栏
+ * 图标+文字导航，支持页面切换和深色/亮色模式切换
  */
 Item {
     id: root

@@ -18,7 +18,6 @@ from core.runtime.types import (
     ToolDefinition, ApiRequest,
 )
 from core.runtime.permissions import PermissionMode
-from core.tools import TOOL_DEFINITIONS
 
 
 class ApiClient:
@@ -49,6 +48,7 @@ class ApiClient:
         self._model_info: Dict[str, Any] = {}
 
     def get_tool_definitions(self) -> List[ToolDefinition]:
+        from core.tools import TOOL_DEFINITIONS
         return [t for t in TOOL_DEFINITIONS if t.name not in self._disabled_tools]
 
     @staticmethod
