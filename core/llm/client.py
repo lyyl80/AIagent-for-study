@@ -305,11 +305,7 @@ class ModelManager:
             "deepseek-v4-pro": {"name": "DeepSeek Pro", "type": "cloud"},
         },
         "本地模型": {
-            "gemma3:12b": {"name": "gemma3:12b", "type": "local"},
-            "gpt-oss:20b": {"name": "gpt-oss:20b", "type": "local"},
-            "qwen3.5:9b": {"name": "qwen3.5:9b", "type": "local"},
-
-
+            
         }
     }
 
