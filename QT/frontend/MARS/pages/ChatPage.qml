@@ -1,4 +1,4 @@
-import QtQuick
+﻿import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
@@ -586,37 +586,39 @@ Rectangle {
             Layout.fillHeight: true
             spacing: 0
 
-            // 头栏
+            // 头栏 — 半透明胶囊式
             Rectangle {
-                width: parent.width
-                height: 48
-                color: theme ? theme.cardColor : "#FFFFFF"
+                id: chatHeader
+                height: 40
+                radius: height / 2
+                color: "transparent"
+                width: titleRow.width + 40
+                anchors.left: parent.left
+                anchors.leftMargin: 8
 
-                // 底部分割线
+                // 半透明胶囊背景
                 Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 1
-                    color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.06)
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: theme ? theme.cardColor : "#FFFFFF"
+                    opacity: 0.7
                 }
 
                 Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
+                    id: titleRow
+                    anchors.centerIn: parent
                     spacing: 8
 
                     // 菜单按钮（侧边栏隐藏时显示）
                     Item {
-                        width: 32; height: 32
+                        width: 28; height: 28
                         anchors.verticalCenter: parent.verticalCenter
                         visible: !root.sidebarVisible
                         property bool menuHovered: false
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 8
+                            radius: 6
                             color: parent.menuHovered
                                    ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.04))
                                    : "transparent"
@@ -627,7 +629,7 @@ Rectangle {
                             anchors.centerIn: parent
                             iconName: "sidebar"
                             iconColor: theme ? theme.accentColor : "#AF52DE"
-                            size: 18
+                            size: 16
                         }
 
                         MouseArea {
@@ -656,7 +658,7 @@ Rectangle {
             Item {
                 id: messageArea
                 width: parent.width
-                height: parent.height - 48 - inputBar.height
+                height: parent.height - chatHeader.height - inputBar.height
 
                 ListView {
                     id: messageList
