@@ -12,7 +12,7 @@ Window {
     visible: true
     title: ""
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint
-    readonly property var theme: AppleTheme {}
+    readonly property var theme: FluentTheme {}
     color: theme.bgColor
 
     // 暗色模式快捷键

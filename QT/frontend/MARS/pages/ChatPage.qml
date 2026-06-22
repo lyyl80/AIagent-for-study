@@ -135,6 +135,7 @@ Rectangle {
                 anchors.bottom: parent.bottom
                 width: 1
                 color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.06)
+                
             }
 
             ColumnLayout {
@@ -586,27 +587,17 @@ Rectangle {
             Layout.fillHeight: true
             spacing: 0
 
-            // 头栏 — 半透明胶囊式
-            Rectangle {
+            // 头栏 — 仅标题文字，无背景遮挡
+            Item {
                 id: chatHeader
                 height: 40
-                radius: height / 2
-                color: "transparent"
-                width: titleRow.width + 40
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-
-                // 半透明胶囊背景
-                Rectangle {
-                    anchors.fill: parent
-                    radius: parent.radius
-                    color: theme ? theme.cardColor : "#FFFFFF"
-                    opacity: 0.7
-                }
+                width: parent.width
 
                 Row {
                     id: titleRow
-                    anchors.centerIn: parent
+                    anchors.left: parent.left
+                    anchors.leftMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
                     spacing: 8
 
                     // 菜单按钮（侧边栏隐藏时显示）
