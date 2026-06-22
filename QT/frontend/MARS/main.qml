@@ -65,6 +65,32 @@ Window {
                 onDeleteSession: function(filename) {
                     chatBridge.deleteSession(filename)
                 }
+
+                onRegenerateMessage: {
+                    // 重新发送最后一条用户消息
+                    var lastUserMsg = ""
+                    for (var i = chatPage.chatModel.count - 1; i >= 0; i--) {
+                        if (chatPage.chatModel.get(i).sender === "user") {
+                            lastUserMsg = chatPage.chatModel.get(i).message
+                            // 删除该消息及之后的所有消息
+                            while (chatPage.chatModel.count > i) {
+                                chatPage.chatModel.remove(i)
+                            }
+                            break
+                        }
+                    }
+                    if (lastUserMsg !== "") {
+                        chatBridge.sendMessage(lastUserMsg)
+                    }
+                }
+
+                onRenameSession: function(filename, newName) {
+                    chatBridge.renameSession(filename, newName)
+                }
+
+                onExportSession: function(filename, exportPath) {
+                    chatBridge.exportSession(filename, exportPath)
+                }
             }
 
             VisionPage {

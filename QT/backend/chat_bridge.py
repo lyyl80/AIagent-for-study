@@ -261,6 +261,73 @@ class ChatBridge(QObject):
             _os.remove(session_path)
         self.refreshSessions()
 
+    @Slot(str, str)
+    def renameSession(self, old_filename, new_name):
+        """
+        重命名会话文件
+        
+        Args:
+            old_filename (str): 旧文件名（不含扩展名）
+            new_name (str): 新的会话名称
+        """
+        try:
+            new_filename = Memory.rename_session(old_filename, new_name)
+            # 如果当前正在查看的会话被重命名，更新引用
+            if self._current_memory and self._current_memory.filename == old_filename:
+                self._current_memory.filename = new_filename
+                self._current_memory.persist_path = f"session/{new_filename}.json"
+            self.refreshSessions()
+        except Exception as e:
+            self.errorOccurred.emit(f"重命名失败: {e}")
+
+    @Slot(str, str)
+    def exportSession(self, filename, export_path):
+        """
+        导出会话为文本文件
+        
+        Args:
+            filename (str): 会话文件名（不含扩展名）
+            export_path (str): 导出文件路径
+        """
+        try:
+            memory = Memory.load_session(filename)
+            lines = []
+            lines.append(f"MARS AI Agent — 会话导出")
+            lines.append(f"会话ID: {memory.session_id}")
+            lines.append(f"创建时间: {memory.created_time}")
+            lines.append(f"消息数: {len(memory.messages)}")
+            lines.append("=" * 60)
+            lines.append("")
+
+            for msg in memory.messages:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if role == "user":
+                    lines.append(f"【我】{content}")
+                elif role == "assistant":
+                    lines.append(f"【MARS】{content}")
+                else:
+                    lines.append(f"【{role}】{content}")
+                lines.append("")
+
+            # 导出工具调用历史
+            tool_entries = [h for h in memory.history if "input" in h]
+            if tool_entries:
+                lines.append("=" * 60)
+                lines.append("工具调用记录:")
+                lines.append("")
+                for entry in tool_entries:
+                    tool_name = entry.get("input", {}).get("tool", "unknown")
+                    output = entry.get("output_summary") or entry.get("output", "")
+                    lines.append(f"  [{tool_name}] {output[:200]}")
+                    lines.append("")
+
+            export_text = "\n".join(lines)
+            with open(export_path, 'w', encoding='utf-8') as f:
+                f.write(export_text)
+        except Exception as e:
+            self.errorOccurred.emit(f"导出失败: {e}")
+
     @Slot()
     def refreshSessions(self):
         """刷新会话列表并发射更新信号"""

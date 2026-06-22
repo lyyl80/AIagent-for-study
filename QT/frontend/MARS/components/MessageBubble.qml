@@ -4,7 +4,7 @@ import MARS 1.0
 
 /**
  * MessageBubble — Apple Messages 风格消息气泡
- * 18px 圆角、Apple 色彩、弹性入场动画
+ * AI 消息支持 Markdown 渲染、hover 复制/重新生成
  */
 Rectangle {
     id: root
@@ -17,22 +17,35 @@ Rectangle {
     property bool needInput: false
     property bool isNewMessage: false
 
+    signal copyMessage(string text)
+    signal regenerateMessage()
+
     width: parent ? parent.width : 0
     implicitHeight: contentColumn.height + 8
     color: "transparent"
 
     // 入场动画
     property real opacityValue: isNewMessage ? 0 : 1
-    property real yOffsetValue: isNewMessage ? 8 : 0
+    property real yOffsetValue: isNewMessage ? 12 : 0
 
-    Behavior on opacityValue { enabled: root.isNewMessage; NumberAnimation { duration: 300; easing.type: Easing.OutQuart } }
-    Behavior on yOffsetValue { enabled: root.isNewMessage; NumberAnimation { duration: 300; easing.type: Easing.OutQuart } }
+    Behavior on opacityValue { enabled: root.isNewMessage; NumberAnimation { duration: 350; easing.type: Easing.OutQuart } }
+    Behavior on yOffsetValue { enabled: root.isNewMessage; NumberAnimation { duration: 350; easing.type: Easing.OutQuart } }
 
     Component.onCompleted: {
         if (isNewMessage) {
             opacityValue = 1
             yOffsetValue = 0
         }
+    }
+
+    // hover 检测
+    MouseArea {
+        id: hoverArea
+        anchors.fill: parent
+        hoverEnabled: true
+        enabled: sender === "ai" && root.message !== ""
+        propagateComposedEvents: true
+        acceptedButtons: Qt.NoButton  // 不拦截点击
     }
 
     Column {
@@ -53,11 +66,13 @@ Rectangle {
             anchors.left: sender === "ai" ? parent.left : undefined
             anchors.right: sender === "user" ? parent.right : undefined
 
-            width: Math.min(innerText.implicitWidth + 32, parent.width * 0.75)
+            // AI 消息更宽（为代码块留空间），用户消息自适应
+            width: sender === "ai"
+                   ? Math.min(parent.width, parent.width * 0.85)
+                   : Math.min(innerText.implicitWidth + 32, parent.width * 0.75)
             height: innerText.implicitHeight + 28
             radius: 18
 
-            // Apple Messages 风格：用户气泡尖角右下，AI 气泡尖角左下
             bottomLeftRadius: sender === "ai" ? 4 : 18
             bottomRightRadius: sender === "user" ? 4 : 18
 
@@ -70,12 +85,14 @@ Rectangle {
                           : "transparent"
             border.width: sender === "ai" ? 1 : 0
 
-            Label {
+            // 消息文本 — AI 消息用 MarkdownText，用户消息用纯文本
+            Text {
                 id: innerText
                 anchors.fill: parent
                 anchors.margins: 16
 
                 text: root.message
+                textFormat: sender === "ai" ? Text.MarkdownText : Text.PlainText
                 color: sender === "user"
                        ? (theme ? theme.userBubbleText : "#FFFFFF")
                        : (theme ? theme.aiBubbleText : "#1C1C1E")
@@ -84,6 +101,77 @@ Rectangle {
                 antialiasing: true
                 wrapMode: Text.Wrap
                 lineHeight: 1.45
+
+                onLinkActivated: Qt.openUrlExternally(link)
+            }
+
+            // hover 操作栏（仅 AI 消息）
+            Row {
+                id: hoverActions
+                visible: sender === "ai" && root.message !== "" && hoverArea.containsMouse
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.topMargin: -4
+                anchors.rightMargin: -4
+                spacing: 2
+
+                // 复制按钮
+                Rectangle {
+                    width: 28; height: 28; radius: 6
+                    color: copyMouseArea.containsMouse
+                           ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.06))
+                           : (theme ? theme.cardColor : "#FFFFFF")
+                    border.color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.08)
+                    border.width: 1
+                    Behavior on color { ColorAnimation { duration: 100 } }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        iconName: "copy"
+                        iconColor: copyMouseArea.containsMouse
+                                   ? (theme ? theme.accentColor : "#AF52DE")
+                                   : (theme ? theme.secondaryText : "#8E8E93")
+                        size: 14
+                    }
+
+                    MouseArea {
+                        id: copyMouseArea
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: {
+                            root.copyMessage(root.message)
+                        }
+                    }
+                }
+
+                // 重新生成按钮
+                Rectangle {
+                    width: 28; height: 28; radius: 6
+                    color: regenMouseArea.containsMouse
+                           ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.06))
+                           : (theme ? theme.cardColor : "#FFFFFF")
+                    border.color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.08)
+                    border.width: 1
+                    Behavior on color { ColorAnimation { duration: 100 } }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        iconName: "refresh"
+                        iconColor: regenMouseArea.containsMouse
+                                   ? (theme ? theme.accentColor : "#AF52DE")
+                                   : (theme ? theme.secondaryText : "#8E8E93")
+                        size: 14
+                    }
+
+                    MouseArea {
+                        id: regenMouseArea
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onClicked: root.regenerateMessage()
+                    }
+                }
             }
         }
 
@@ -109,7 +197,6 @@ Rectangle {
                 anchors.margins: 5
                 spacing: 0
 
-                // 头部（可点击展开）
                 MouseArea {
                     height: 28
                     anchors.left: parent.left
@@ -123,7 +210,6 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 6
 
-                        // 展开/折叠箭头
                         Icon {
                             iconName: "chevron-right"
                             iconColor: theme ? theme.secondaryText : "#8E8E93"
@@ -133,7 +219,6 @@ Rectangle {
                             Behavior on rotation { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                         }
 
-                        // 工具图标
                         Icon {
                             iconName: "tools"
                             iconColor: theme ? theme.accentColor : "#AF52DE"
@@ -141,7 +226,6 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
-                        // 工具名称
                         Label {
                             text: root.toolName
                             font.pixelSize: theme ? theme.fontSizeBody : 13
@@ -151,7 +235,6 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
-                        // 结果预览
                         Label {
                             text: " · " + (root.toolResult || "").replace(/\n/g, ' ').substring(0, 50)
                             font.pixelSize: theme ? theme.fontSizeCaption : 11
@@ -164,7 +247,6 @@ Rectangle {
                     }
                 }
 
-                // 分割线
                 Rectangle {
                     width: parent.width
                     height: 1
@@ -172,7 +254,6 @@ Rectangle {
                     visible: toolCard.toolExpanded
                 }
 
-                // 展开内容
                 Text {
                     text: root.toolResult
                     font.pixelSize: theme ? theme.fontSizeCaption : 11
@@ -196,7 +277,7 @@ Rectangle {
             anchors.right: parent.right
             visible: root.needInput
             radius: theme ? theme.cornerRadiusSm : 6
-            color: Qt.rgba(1, 0.624, 0.039, 0.12)   // Apple Orange 12%
+            color: Qt.rgba(1, 0.624, 0.039, 0.12)
             border.color: Qt.rgba(1, 0.624, 0.039, 0.3)
             border.width: 1
             height: visible ? hintInner.height + 16 : 0

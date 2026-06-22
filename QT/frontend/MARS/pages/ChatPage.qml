@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import MARS 1.0
 import "../components"
 
@@ -18,6 +19,10 @@ Rectangle {
     property var chatModel: ListModel {}
     property string currentSessionFilename: ""
     property string currentSessionName: ""
+    property string searchText: ""
+    property string editingFilename: ""
+    property string editingText: ""
+    property string pendingExportFilename: ""
 
     color: theme ? theme.bgColor : "#F2F2F7"
 
@@ -26,6 +31,9 @@ Rectangle {
     signal refreshSessions()
     signal newSession()
     signal deleteSession(string filename)
+    signal regenerateMessage()
+    signal renameSession(string filename, string newName)
+    signal exportSession(string filename, string exportPath)
 
     // ====== 日期格式化辅助 ======
 
@@ -82,21 +90,29 @@ Rectangle {
 
     ListModel { id: sessionListModel }
 
-    onSessionListChanged: {
+    function rebuildSessionModel() {
         sessionListModel.clear()
+        var query = searchText.toLowerCase()
         for (var i = 0; i < sessionList.length; i++) {
             var s = sessionList[i]
             var fn = s.filename || "(无标题)"
             var ct = s.created_time || ""
+            var dn = getDisplayName(fn)
+            // 搜索过滤：匹配 displayName 或 filename
+            if (query !== "" && dn.toLowerCase().indexOf(query) === -1 && fn.toLowerCase().indexOf(query) === -1)
+                continue
             sessionListModel.append({
                 filename: fn,
                 created_time: ct,
                 dateGroup: getDateGroup(ct),
-                displayName: getDisplayName(fn),
+                displayName: dn,
                 displayTime: getDisplayTime(ct)
             })
         }
     }
+
+    onSessionListChanged: rebuildSessionModel()
+    onSearchTextChanged: rebuildSessionModel()
 
     // ====== 布局 ======
 
@@ -181,6 +197,48 @@ Rectangle {
                     }
                 }
 
+                // 搜索框
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 12
+                    Layout.topMargin: 4
+                    Layout.preferredHeight: 32
+                    radius: 8
+                    color: theme ? theme.inputBg : "#F2F2F7"
+                    border.color: theme ? theme.inputBorder : Qt.rgba(0,0,0,0.08)
+                    border.width: 1
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 6
+
+                        Icon {
+                            iconName: "search"
+                            iconColor: theme ? theme.tertiaryText : "#C7C7CC"
+                            size: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        TextField {
+                            id: searchField
+                            width: sessionSidebar.width - 56
+                            anchors.verticalCenter: parent.verticalCenter
+                            placeholderText: "搜索会话"
+                            placeholderTextColor: theme ? theme.tertiaryText : "#C7C7CC"
+                            color: theme ? theme.textColor : "#1C1C1E"
+                            font.pixelSize: theme ? theme.fontSizeBody : 13
+                            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                            background: Item {}
+                            selectByMouse: true
+
+                            onTextChanged: root.searchText = text
+                        }
+                    }
+                }
+
                 // 会话列表（日期分组）
                 ListView {
                     id: sessionListView
@@ -228,12 +286,14 @@ Rectangle {
                         height: 44
 
                         property bool isActive: filename === root.currentSessionFilename
+                        property bool isEditing: filename === root.editingFilename
 
                         MouseArea {
                             id: hoverArea
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            enabled: !isEditing
                             onClicked: {
                                 root.currentSessionFilename = filename
                                 root.currentSessionName = displayName
@@ -259,9 +319,11 @@ Rectangle {
                             spacing: 8
 
                             Column {
+                                id: infoColumn
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
                                 spacing: 2
+                                visible: !isEditing
 
                                 Label {
                                     text: displayName
@@ -285,38 +347,156 @@ Rectangle {
                                 }
                             }
 
-                            // 删除按钮
-                            Item {
+                            // 内联重命名编辑框
+                            TextField {
+                                id: renameField
+                                Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignVCenter
-                                width: 28; height: 28
-                                property bool delHovered: false
-                                visible: hoverArea.containsMouse || delHovered
+                                visible: isEditing
+                                text: root.editingText
+                                color: theme ? theme.textColor : "#1C1C1E"
+                                font.pixelSize: theme ? theme.fontSizeBody : 13
+                                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                background: Rectangle {
+                                    radius: 4
+                                    color: theme ? theme.inputBg : "#F2F2F7"
+                                    border.color: theme ? theme.accentColor : "#AF52DE"
+                                    border.width: 1
+                                }
+                                selectByMouse: true
+                                focus: visible
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 24; height: 24; radius: 6
-                                    color: parent.delHovered
-                                           ? Qt.rgba(1, 0.231, 0.188, 0.12)
-                                           : "transparent"
-                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                onTextChanged: root.editingText = text
+
+                                onAccepted: {
+                                    if (root.editingText.trim() !== "") {
+                                        root.renameSession(filename, root.editingText.trim())
+                                    }
+                                    root.editingFilename = ""
                                 }
 
-                                Icon {
-                                    anchors.centerIn: parent
-                                    iconName: "trash"
-                                    iconColor: parent.delHovered
-                                               ? (theme ? theme.errorBg : "#FF3B30")
-                                               : (theme ? theme.tertiaryText : "#C7C7CC")
-                                    size: 14
+                                Keys.onEscapePressed: {
+                                    root.editingFilename = ""
                                 }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    hoverEnabled: true
-                                    onEntered: parent.delHovered = true
-                                    onExited: parent.delHovered = false
-                                    onClicked: root.deleteSession(filename)
+                                Component.onCompleted: {
+                                    if (visible) {
+                                        text = root.editingText
+                                        selectAll()
+                                        forceActiveFocus()
+                                    }
+                                }
+                            }
+
+                            // 操作按钮组（hover 显示）
+                            Row {
+                                Layout.alignment: Qt.AlignVCenter
+                                visible: hoverArea.containsMouse && !isEditing
+                                spacing: 0
+
+                                // 编辑/重命名按钮
+                                Item {
+                                    width: 24; height: 28
+                                    property bool editHovered: false
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 22; height: 22; radius: 5
+                                        color: parent.editHovered
+                                               ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.06))
+                                               : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 100 } }
+                                    }
+
+                                    Icon {
+                                        anchors.centerIn: parent
+                                        iconName: "edit"
+                                        iconColor: parent.editHovered
+                                                   ? (theme ? theme.accentColor : "#AF52DE")
+                                                   : (theme ? theme.secondaryText : "#8E8E93")
+                                        size: 13
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
+                                        onEntered: parent.editHovered = true
+                                        onExited: parent.editHovered = false
+                                        onClicked: {
+                                            root.editingFilename = filename
+                                            root.editingText = displayName
+                                        }
+                                    }
+                                }
+
+                                // 导出按钮
+                                Item {
+                                    width: 24; height: 28
+                                    property bool exportHovered: false
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 22; height: 22; radius: 5
+                                        color: parent.exportHovered
+                                               ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.06))
+                                               : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 100 } }
+                                    }
+
+                                    Icon {
+                                        anchors.centerIn: parent
+                                        iconName: "arrow-down"
+                                        iconColor: parent.exportHovered
+                                                   ? (theme ? theme.accentColor : "#AF52DE")
+                                                   : (theme ? theme.secondaryText : "#8E8E93")
+                                        size: 13
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
+                                        onEntered: parent.exportHovered = true
+                                        onExited: parent.exportHovered = false
+                                        onClicked: {
+                                            root.pendingExportFilename = filename
+                                            exportDialog.open()
+                                        }
+                                    }
+                                }
+
+                                // 删除按钮
+                                Item {
+                                    width: 24; height: 28
+                                    property bool delHovered: false
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 22; height: 22; radius: 5
+                                        color: parent.delHovered
+                                               ? Qt.rgba(1, 0.231, 0.188, 0.12)
+                                               : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 100 } }
+                                    }
+
+                                    Icon {
+                                        anchors.centerIn: parent
+                                        iconName: "trash"
+                                        iconColor: parent.delHovered
+                                                   ? (theme ? theme.errorBg : "#FF3B30")
+                                                   : (theme ? theme.secondaryText : "#8E8E93")
+                                        size: 13
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
+                                        onEntered: parent.delHovered = true
+                                        onExited: parent.delHovered = false
+                                        onClicked: root.deleteSession(filename)
+                                    }
                                 }
                             }
                         }
@@ -474,7 +654,7 @@ Rectangle {
             Item {
                 id: messageArea
                 width: parent.width
-                height: parent.height - 48 - (theme ? theme.inputBarHeight : 64)
+                height: parent.height - 48 - inputBar.height
 
                 ListView {
                     id: messageList
@@ -487,6 +667,20 @@ Rectangle {
 
                     onCountChanged: Qt.callLater(positionViewAtEnd)
 
+                    // 打字指示器（AI 思考时显示在列表底部）
+                    footer: Item {
+                        width: messageList.width
+                        height: root.isThinking ? 48 : 0
+                        visible: root.isThinking
+
+                        TypingIndicator {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            theme: root.theme
+                        }
+                    }
+
                     delegate: MessageBubble {
                         width: messageList.width
                         theme: root.theme
@@ -495,6 +689,15 @@ Rectangle {
                         toolName: model.toolName || ""
                         toolResult: model.toolResult || ""
                         isNewMessage: index === messageList.count - 1
+
+                        onCopyMessage: function(text) {
+                            // 复制到剪贴板
+                            Qt.application.clipboard.setText(text)
+                        }
+
+                        onRegenerateMessage: {
+                            root.regenerateMessage()
+                        }
                     }
 
                     ScrollBar.vertical: ScrollBar {
@@ -506,6 +709,69 @@ Rectangle {
                             color: theme ? theme.tertiaryText : "#C7C7CC"
                             opacity: 0.5
                         }
+                    }
+                }
+
+                // 滚动到底部按钮
+                Rectangle {
+                    id: scrollBottomBtn
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: 16
+                    anchors.bottomMargin: 16
+                    width: 36
+                    height: 36
+                    radius: 18
+                    color: theme ? theme.cardColor : "#FFFFFF"
+                    border.color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.08)
+                    border.width: 1
+                    visible: chatModel.count > 0 && !messageList.atYEnd
+
+                    // 入场/退场动画
+                    opacity: visible ? 1 : 0
+                    scale: visible ? 1 : 0.5
+                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutQuart } }
+                    Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutQuart } }
+
+                    property bool hovered: false
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: scrollBottomBtn.hovered
+                               ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.04))
+                               : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        iconName: "arrow-down"
+                        iconColor: scrollBottomBtn.hovered
+                                   ? (theme ? theme.accentColor : "#AF52DE")
+                                   : (theme ? theme.secondaryText : "#8E8E93")
+                        size: 18
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        hoverEnabled: true
+                        onEntered: scrollBottomBtn.hovered = true
+                        onExited: scrollBottomBtn.hovered = false
+                        onClicked: {
+                            scrollAnim.from = messageList.contentY
+                            scrollAnim.to = messageList.contentHeight - messageList.height
+                            scrollAnim.start()
+                        }
+                    }
+
+                    NumberAnimation {
+                        id: scrollAnim
+                        target: messageList
+                        property: "contentY"
+                        duration: 350
+                        easing.type: Easing.OutQuart
                     }
                 }
 
@@ -555,12 +821,29 @@ Rectangle {
 
             // 输入栏
             InputBar {
+                id: inputBar
                 theme: root.theme
                 isThinking: root.isThinking
 
                 onSendMessage: function(text) {
                     root.userMessage(text)
                 }
+            }
+        }
+    }
+
+    // 导出文件对话框
+    FileDialog {
+        id: exportDialog
+        title: "导出会话"
+        fileMode: FileDialog.SaveFile
+        defaultSuffix: "txt"
+        nameFilters: ["文本文件 (*.txt)", "所有文件 (*)"]
+
+        onAccepted: {
+            if (root.pendingExportFilename !== "") {
+                root.exportSession(root.pendingExportFilename, currentFile.toString().replace("file:///", ""))
+                root.pendingExportFilename = ""
             }
         }
     }

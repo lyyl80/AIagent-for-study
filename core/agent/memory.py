@@ -295,6 +295,73 @@ class Memory:
         return sessions_list
     
     @staticmethod
+    def rename_session(old_filename: str, new_name: str) -> str:
+        """
+        重命名会话文件，保留 session_id 前缀
+
+        Args:
+            old_filename (str): 旧文件名（不含扩展名）
+            new_name (str): 新的会话名称（摘要部分）
+
+        Returns:
+            str: 新的文件名（不含扩展名）
+
+        Raises:
+            FileNotFoundError: 当旧文件不存在时
+            Exception: 当重命名过程出错时
+        """
+        old_path = f"session/{old_filename}.json"
+        if not os.path.exists(old_path):
+            raise FileNotFoundError(f"会话文件 {old_filename} 不存在")
+
+        # 提取 session_id（时间戳部分，格式 YYYY-MM-DD_HH-MM-SS）
+        session_id = old_filename.split('_')[0] if '_' in old_filename else old_filename
+        # 如果文件名以日期+时间开头（含两个下划线），保留完整时间戳
+        match = re.match(r'^(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})', old_filename)
+        if match:
+            session_id = match.group(1)
+
+        # 清理新名称：移除文件系统不允许的字符
+        safe_name = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '', new_name).strip()
+        safe_name = ' '.join(safe_name.split())  # 压缩空白
+        if not safe_name:
+            safe_name = "会话"
+
+        new_filename = f"{session_id}_{safe_name}"
+        new_path = f"session/{new_filename}.json"
+
+        # 如果新旧文件名相同，直接返回
+        if old_filename == new_filename:
+            return new_filename
+
+        # 处理文件名冲突：如果目标文件已存在，添加序号
+        if os.path.exists(new_path):
+            counter = 2
+            while os.path.exists(f"session/{session_id}_{safe_name}_{counter}.json"):
+                counter += 1
+            new_filename = f"{session_id}_{safe_name}_{counter}"
+            new_path = f"session/{new_filename}.json"
+
+        try:
+            # 读取旧文件数据
+            with open(old_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 更新文件名
+            data["filename"] = new_filename
+
+            # 写入新文件
+            with open(new_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            # 删除旧文件
+            os.remove(old_path)
+
+            return new_filename
+        except Exception as e:
+            raise Exception(f"重命名会话失败: {str(e)}")
+
+    @staticmethod
     def load_session(filename: str) -> 'Memory':
         """
         加载指定会话

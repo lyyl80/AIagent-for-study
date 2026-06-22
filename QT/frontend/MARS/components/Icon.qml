@@ -85,6 +85,9 @@ Item {
             case "error":        drawError(ctx, s, lw); break
             case "success":      drawSuccess(ctx, s, lw); break
             case "sidebar":      drawSidebar(ctx, s, lw); break
+            case "copy":         drawCopy(ctx, s, lw); break
+            case "edit":         drawEdit(ctx, s, lw); break
+            case "arrow-down":   drawArrowDown(ctx, s, lw); break
 
             default:             drawCircle(ctx, s, lw); break
         }
@@ -532,6 +535,57 @@ Item {
         ctx.beginPath()
         ctx.moveTo(s*0.4, s*0.2)
         ctx.lineTo(s*0.4, s*0.8)
+        ctx.stroke()
+    }
+
+    function drawCopy(ctx, s, lw) {
+        ctx.lineWidth = lw
+        // 后面的卡片（偏移）
+        ctx.beginPath()
+        roundRect(ctx, s*0.38, s*0.18, s*0.44, s*0.56, s*0.06)
+        ctx.stroke()
+        // 前面的卡片
+        ctx.beginPath()
+        roundRect(ctx, s*0.18, s*0.26, s*0.44, s*0.56, s*0.06)
+        ctx.fill()
+        ctx.beginPath()
+        roundRect(ctx, s*0.18, s*0.26, s*0.44, s*0.56, s*0.06)
+        ctx.stroke()
+    }
+
+    function drawEdit(ctx, s, lw) {
+        ctx.lineWidth = lw
+        // 铅笔主体（对角线）
+        ctx.beginPath()
+        ctx.moveTo(s*0.72, s*0.28)
+        ctx.lineTo(s*0.28, s*0.72)
+        ctx.stroke()
+        // 笔尖三角
+        ctx.beginPath()
+        ctx.moveTo(s*0.28, s*0.72)
+        ctx.lineTo(s*0.22, s*0.78)
+        ctx.lineTo(s*0.32, s*0.68)
+        ctx.closePath()
+        ctx.fill()
+        // 顶部笔帽
+        ctx.beginPath()
+        ctx.moveTo(s*0.64, s*0.2)
+        ctx.lineTo(s*0.8, s*0.36)
+        ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(s*0.6, s*0.24)
+        ctx.lineTo(s*0.76, s*0.4)
+        ctx.stroke()
+    }
+
+    function drawArrowDown(ctx, s, lw) {
+        ctx.lineWidth = lw
+        ctx.beginPath()
+        ctx.moveTo(s*0.5, s*0.25)
+        ctx.lineTo(s*0.5, s*0.75)
+        ctx.moveTo(s*0.3, s*0.55)
+        ctx.lineTo(s*0.5, s*0.75)
+        ctx.lineTo(s*0.7, s*0.55)
         ctx.stroke()
     }
 
