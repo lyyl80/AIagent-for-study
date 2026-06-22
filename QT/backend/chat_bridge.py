@@ -16,6 +16,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path: sys.path.insert(0,project_root)
 
 from PySide6.QtCore import QObject, Slot, Signal, Property
+from PySide6.QtGui import QGuiApplication
 from core.agent.memory import Memory
 from core.tools import call_tool, list_tools, get_tool_description
 from backend.worker import ChatWorker
@@ -207,6 +208,11 @@ class ChatBridge(QObject):
         self._current_memory.clear()
 
     @Slot(str)
+    def copyToClipboard(self, text):
+        """复制文本到系统剪贴板"""
+        QGuiApplication.clipboard().setText(text)
+
+    @Slot(str)
     def loadSession(self, filename):
         """
         加载指定会话文件
@@ -226,19 +232,47 @@ class ChatBridge(QObject):
         从Memory历史记录重建聊天界面
         
         遍历memory.history，按时间顺序发射消息和工具调用信号到QML。
-        跳过纯用户消息（已在UI中显示）。
+        连续的工具调用会自动分组成一个组，避免界面混乱。
         """
-        for entry in self._current_memory.history:
+        import json
+        
+        i = 0
+        while i < len(self._current_memory.history):
+            entry = self._current_memory.history[i]
             if "input" in entry:
                 tool = entry.get("input", {}).get("tool", "")
                 output = entry.get("output_summary") or entry.get("output", "")
                 if tool in ("talk", "finish"):
                     self.messageReceived.emit("ai", output)
+                    i += 1
                 elif tool == "user":
                     pass  # 用户消息不需要重复显示
+                    i += 1
                 else:
-                    args = entry.get("input", {}).get("tool_args", {})
-                    self.toolCalled.emit(tool, str(args), output)
+                    # 收集连续的工具调用
+                    tools = [{"name": tool, "result": output}]
+                    j = i + 1
+                    while j < len(self._current_memory.history):
+                        next_entry = self._current_memory.history[j]
+                        if "input" in next_entry:
+                            next_tool = next_entry.get("input", {}).get("tool", "")
+                            if next_tool not in ("talk", "finish", "user"):
+                                next_output = next_entry.get("output_summary") or next_entry.get("output", "")
+                                tools.append({"name": next_tool, "result": next_output})
+                                j += 1
+                                continue
+                    break
+                    
+                    if len(tools) == 1:
+                        args = entry.get("input", {}).get("tool_args", {})
+                        self.toolCalled.emit(tools[0]["name"], str(args), tools[0]["result"])
+                    else:
+                        # 作为组发射，QML 端会自动合并
+                        self.toolCalled.emit(tools[0]["name"], "", tools[0]["result"])
+                        for k in range(1, len(tools)):
+                            self.toolCalled.emit(tools[k]["name"], "", tools[k]["result"])
+                    
+                    i = j
             else:
                 role = entry.get("role", "")
                 content = entry.get("content", "")
@@ -246,6 +280,7 @@ class ChatBridge(QObject):
                     self.messageReceived.emit("user", content)
                 elif role == "assistant":
                     self.messageReceived.emit("ai", content)
+                i += 1
 
     @Slot(str)
     def deleteSession(self, filename):

@@ -282,11 +282,13 @@ Rectangle {
                     }
 
                     delegate: Item {
+                        id: sessionDelegate
                         width: sessionListView.width - 16
                         height: 44
 
                         property bool isActive: filename === root.currentSessionFilename
                         property bool isEditing: filename === root.editingFilename
+                        property bool actionHovered: false
 
                         MouseArea {
                             id: hoverArea
@@ -306,7 +308,7 @@ Rectangle {
                             radius: 8
                             color: isActive
                                    ? Qt.rgba(0.686, 0.322, 0.871, 0.12)
-                                   : (hoverArea.containsMouse
+                                   : (hoverArea.containsMouse || sessionDelegate.actionHovered
                                       ? (theme ? theme.hoverColor : Qt.rgba(0,0,0,0.04))
                                       : "transparent")
                             Behavior on color { ColorAnimation { duration: 150 } }
@@ -391,7 +393,7 @@ Rectangle {
                             // 操作按钮组（hover 显示）
                             Row {
                                 Layout.alignment: Qt.AlignVCenter
-                                visible: hoverArea.containsMouse && !isEditing
+                                visible: (hoverArea.containsMouse || sessionDelegate.actionHovered) && !isEditing
                                 spacing: 0
 
                                 // 编辑/重命名按钮
@@ -421,8 +423,8 @@ Rectangle {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
                                         hoverEnabled: true
-                                        onEntered: parent.editHovered = true
-                                        onExited: parent.editHovered = false
+                                        onEntered: { parent.editHovered = true; sessionDelegate.actionHovered = true }
+                                        onExited: { parent.editHovered = false; sessionDelegate.actionHovered = false }
                                         onClicked: {
                                             root.editingFilename = filename
                                             root.editingText = displayName
@@ -457,8 +459,8 @@ Rectangle {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
                                         hoverEnabled: true
-                                        onEntered: parent.exportHovered = true
-                                        onExited: parent.exportHovered = false
+                                        onEntered: { parent.exportHovered = true; sessionDelegate.actionHovered = true }
+                                        onExited: { parent.exportHovered = false; sessionDelegate.actionHovered = false }
                                         onClicked: {
                                             root.pendingExportFilename = filename
                                             exportDialog.open()
@@ -493,8 +495,8 @@ Rectangle {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
                                         hoverEnabled: true
-                                        onEntered: parent.delHovered = true
-                                        onExited: parent.delHovered = false
+                                        onEntered: { parent.delHovered = true; sessionDelegate.actionHovered = true }
+                                        onExited: { parent.delHovered = false; sessionDelegate.actionHovered = false }
                                         onClicked: root.deleteSession(filename)
                                     }
                                 }
@@ -691,8 +693,7 @@ Rectangle {
                         isNewMessage: index === messageList.count - 1
 
                         onCopyMessage: function(text) {
-                            // 复制到剪贴板
-                            Qt.application.clipboard.setText(text)
+                            chatBridge.copyToClipboard(text)
                         }
 
                         onRegenerateMessage: {
@@ -765,13 +766,18 @@ Rectangle {
                             scrollAnim.start()
                         }
                     }
+                }
 
-                    NumberAnimation {
-                        id: scrollAnim
-                        target: messageList
-                        property: "contentY"
-                        duration: 350
-                        easing.type: Easing.OutQuart
+                // 滚动动画（放在按钮外部，避免按钮隐藏时动画被中断）
+                NumberAnimation {
+                    id: scrollAnim
+                    target: messageList
+                    property: "contentY"
+                    duration: 350
+                    easing.type: Easing.OutQuart
+                    onStopped: {
+                        // 确保到达底部
+                        messageList.positionViewAtEnd()
                     }
                 }
 

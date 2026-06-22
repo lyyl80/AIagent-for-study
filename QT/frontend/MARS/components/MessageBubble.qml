@@ -185,9 +185,35 @@ Rectangle {
             color: theme ? theme.toolBubbleBg : Qt.rgba(0,0,0,0.02)
             border.color: theme ? theme.toolBubbleBorder : Qt.rgba(0,0,0,0.06)
             border.width: 1
-            height: visible ? toolInner.height + 10 : 0
 
-            property bool toolExpanded: false
+            // 解析工具组
+            property var toolsList: []
+            property bool isGroup: root.toolName === "group"
+            property bool toolsExpanded: false
+
+            Component.onCompleted: {
+                if (isGroup) {
+                    try {
+                        toolsList = JSON.parse(root.toolResult)
+                    } catch(e) {
+                        toolsList = []
+                    }
+                }
+            }
+
+            // 单工具：高度 = toolInner.height + 10
+            // 工具组折叠：固定高度
+            // 工具组展开：动态高度
+            height: {
+                if (!visible) return 0
+                if (isGroup) {
+                    if (toolsList.length > 4 && !toolsExpanded) {
+                        return 44  // 折叠高度
+                    }
+                    return toolInner.height + 10
+                }
+                return toolInner.height + 10
+            }
 
             Column {
                 id: toolInner
@@ -197,12 +223,69 @@ Rectangle {
                 anchors.margins: 5
                 spacing: 0
 
+                // 折叠摘要（工具组且超过 4 个）
+                Rectangle {
+                    width: parent.width
+                    height: 34
+                    color: "transparent"
+                    visible: toolCard.isGroup && toolCard.toolsList.length > 4 && !toolCard.toolsExpanded
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: toolCard.toolsExpanded = true
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 6
+
+                            Icon {
+                                iconName: "chevron-right"
+                                iconColor: theme ? theme.secondaryText : "#8E8E93"
+                                size: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Icon {
+                                iconName: "tools"
+                                iconColor: theme ? theme.accentColor : "#AF52DE"
+                                size: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Label {
+                                text: "调用了 " + toolCard.toolsList.length + " 个工具"
+                                font.pixelSize: theme ? theme.fontSizeBody : 13
+                                font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
+                                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                color: theme ? theme.textColor : "#1C1C1E"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Label {
+                                text: toolCard.toolsList.map(function(t) { return t.name }).join(", ").substring(0, 60)
+                                font.pixelSize: theme ? theme.fontSizeCaption : 11
+                                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                color: theme ? theme.secondaryText : "#8E8E93"
+                                elide: Text.ElideRight
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                }
+
+                // 单工具头部（可点击展开/收起）
                 MouseArea {
                     height: 28
                     anchors.left: parent.left
                     anchors.right: parent.right
                     cursorShape: Qt.PointingHandCursor
+                    visible: !toolCard.isGroup || (toolCard.toolsList.length <= 4) || toolCard.toolsExpanded
                     onClicked: toolCard.toolExpanded = !toolCard.toolExpanded
+
+                    property bool toolExpanded: false
 
                     Row {
                         anchors.left: parent.left
@@ -227,7 +310,9 @@ Rectangle {
                         }
 
                         Label {
-                            text: root.toolName
+                            text: toolCard.isGroup
+                                  ? (toolCard.toolsList.length + " 个工具调用")
+                                  : root.toolName
                             font.pixelSize: theme ? theme.fontSizeBody : 13
                             font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
                             font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
@@ -236,7 +321,9 @@ Rectangle {
                         }
 
                         Label {
-                            text: " · " + (root.toolResult || "").replace(/\n/g, ' ').substring(0, 50)
+                            text: toolCard.isGroup
+                                  ? ""
+                                  : (" · " + (root.toolResult || "").replace(/\n/g, ' ').substring(0, 50))
                             font.pixelSize: theme ? theme.fontSizeCaption : 11
                             font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
                             color: theme ? theme.secondaryText : "#8E8E93"
@@ -247,6 +334,7 @@ Rectangle {
                     }
                 }
 
+                // 分割线
                 Rectangle {
                     width: parent.width
                     height: 1
@@ -254,18 +342,83 @@ Rectangle {
                     visible: toolCard.toolExpanded
                 }
 
+                // 单工具结果
                 Text {
                     text: root.toolResult
                     font.pixelSize: theme ? theme.fontSizeCaption : 11
                     font.family: "SF Mono, Courier New, Consolas, monospace"
                     color: theme ? theme.secondaryText : "#8E8E93"
                     wrapMode: Text.Wrap
-                    visible: toolCard.toolExpanded
+                    visible: !toolCard.isGroup && toolCard.toolExpanded
                     leftPadding: 16
                     topPadding: 6
                     bottomPadding: 6
                     rightPadding: 8
                     width: parent.width
+                }
+
+                // 工具组结果列表
+                Column {
+                    width: parent.width
+                    spacing: 0
+                    visible: toolCard.isGroup && toolCard.toolExpanded
+
+                    Repeater {
+                        model: toolCard.toolsList
+
+                        Column {
+                            width: parent.width
+                            spacing: 0
+
+                            // 单个工具行
+                            Row {
+                                width: parent.width
+                                height: 24
+                                leftPadding: 8
+                                spacing: 6
+
+                                Label {
+                                    text: "•"
+                                    font.pixelSize: theme ? theme.fontSizeBody : 13
+                                    color: theme ? theme.secondaryText : "#8E8E93"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Label {
+                                    text: modelData.name
+                                    font.pixelSize: theme ? theme.fontSizeBody : 13
+                                    font.weight: theme ? theme.fontWeightMedium : Font.Medium
+                                    font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                    color: theme ? theme.accentColor : "#AF52DE"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Label {
+                                    text: " · " + (modelData.result || "").replace(/\n/g, ' ').substring(0, 40)
+                                    font.pixelSize: theme ? theme.fontSizeCaption : 11
+                                    font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                    color: theme ? theme.secondaryText : "#8E8E93"
+                                    elide: Text.ElideRight
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+
+                            // 工具结果详情
+                            Text {
+                                text: modelData.result
+                                font.pixelSize: theme ? theme.fontSizeCaption : 11
+                                font.family: "SF Mono, Courier New, Consolas, monospace"
+                                color: theme ? theme.secondaryText : "#8E8E93"
+                                wrapMode: Text.Wrap
+                                leftPadding: 24
+                                topPadding: 2
+                                bottomPadding: 6
+                                rightPadding: 8
+                                width: parent.width
+                                visible: index === toolCard.toolsList.length - 1 || toolCard.toolExpanded
+                            }
+                        }
+                    }
                 }
             }
         }
