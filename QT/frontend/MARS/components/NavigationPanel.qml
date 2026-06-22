@@ -2,7 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import MARS 1.0
+import "../components"
 
+/**
+ * NavigationPanel — Apple 风格侧边栏
+ * 半透明背景、圆角选中态、Sun/Moon 暗色切换
+ */
 Item {
     id: root
 
@@ -13,23 +18,30 @@ Item {
     readonly property var navItems: [
         { icon: "chat", label: "对话" },
         { icon: "camera", label: "视觉" },
-        { icon: "tools", label: "工具" },
+        { icon: "tools-outline", label: "工具" },
         { icon: "settings", label: "设置" }
     ]
 
-    width: theme ? theme.navWidth : 68
+    width: theme ? theme.navWidth : 72
 
     Rectangle {
         anchors.fill: parent
-        color: root.theme ? root.theme.navBg : "#252525"
-        radius: theme ? theme.cardRadius : 12
-        layer.enabled: true
-        layer.samples: 4
+        color: root.theme ? root.theme.navBg : "rgba(242,242,247,0.85)"
+
+        // 右侧细分割线
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 1
+            color: theme ? theme.separatorColor : Qt.rgba(0,0,0,0.06)
+        }
 
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
 
+            // Logo
             Item {
                 Layout.preferredHeight: 60
                 Layout.fillWidth: true
@@ -38,19 +50,32 @@ Item {
                     anchors.centerIn: parent
                     width: 36
                     height: 36
-                    radius: 8
-                    color: root.theme ? root.theme.accentColor : "#7c3aed"
+                    radius: 10
+                    color: root.theme ? root.theme.accentColor : "#AF52DE"
+
+                    // 微妙渐变感
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Qt.lighter(root.theme ? root.theme.accentColor : "#AF52DE", 1.1) }
+                            GradientStop { position: 1.0; color: Qt.darker(root.theme ? root.theme.accentColor : "#AF52DE", 1.05) }
+                        }
+                    }
 
                     Label {
                         anchors.centerIn: parent
                         text: "M"
-                        color: "#ffffff"
+                        color: "#FFFFFF"
                         font.bold: true
                         font.pixelSize: 18
+                        font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                        z: 1
                     }
                 }
             }
 
+            // 导航项
             Repeater {
                 model: navItems
                 delegate: navDelegate
@@ -58,6 +83,7 @@ Item {
 
             Item { Layout.fillHeight: true }
 
+            // 暗色/亮色切换
             Item {
                 Layout.preferredHeight: 56
                 Layout.fillWidth: true
@@ -65,27 +91,29 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     anchors.margins: 6
-                    radius: 8
-                    color: root.theme && themeToggleArea.containsMouse
+                    radius: 10
+                    color: themeToggleArea.containsMouse
                            ? (root.theme ? root.theme.navHoverBg : "transparent")
                            : "transparent"
+                    Behavior on color { ColorAnimation { duration: 200 } }
 
                     Column {
                         anchors.centerIn: parent
-                        spacing: 2
+                        spacing: 3
 
                         Icon {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            iconName: root.theme && root.theme.darkMode ? "circle-outline" : "circle"
-                            iconColor: root.theme && root.theme.darkMode ? "#8a8a9a" : "#3a3a50"
-                            size: 18
+                            iconName: root.theme && root.theme.darkMode ? "sun" : "moon"
+                            iconColor: root.theme && root.theme.darkMode ? "#98989F" : "#8E8E93"
+                            size: 20
                         }
 
                         Label {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: root.theme && root.theme.darkMode ? "亮色" : "暗色"
                             font.pixelSize: 9
-                            color: root.theme && root.theme.darkMode ? "#a0a0b0" : "#4a4a60"
+                            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                            color: root.theme && root.theme.darkMode ? "#98989F" : "#8E8E93"
                         }
                     }
 
@@ -102,10 +130,6 @@ Item {
                 }
             }
         }
-
-        Item {
-            Layout.preferredHeight: 12
-        }
     }
 
     Component {
@@ -118,50 +142,42 @@ Item {
             property bool isActive: root.currentIndex === index
             property bool isHovered: false
 
-            Rectangle {
-                x: 0
-                width: 3
-                height: 20
-                radius: 1.5
-                y: parent.height / 2 - height / 2
-                visible: isActive
-                color: theme ? theme.navIndicator : "#7c3aed"
-            }
-
+            // 选中背景
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 6
-                radius: 8
+                radius: 10
                 color: {
-                    if (isActive) return theme ? theme.navActiveBg : "#3a3a3a"
-                    if (isHovered) return theme ? theme.navHoverBg : "transparent"
+                    if (isActive) return theme ? theme.navActiveBg : Qt.rgba(0.686, 0.322, 0.870, 0.12)
+                    if (isHovered) return theme ? theme.navHoverBg : Qt.rgba(0,0,0,0.03)
                     return "transparent"
                 }
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: 200 } }
             }
 
             Column {
                 anchors.centerIn: parent
-                spacing: 2
+                spacing: 3
 
                 Icon {
                     anchors.horizontalCenter: parent.horizontalCenter
                     iconName: modelData.icon
                     iconColor: isActive
-                               ? (theme && theme.darkMode ? "#ffffff" : "#7c3aed")
-                               : (theme && theme.darkMode ? "#8a8a9a" : "#2a2a40")
-                    size: 20
+                               ? (theme ? theme.accentColor : "#AF52DE")
+                               : (theme ? theme.navText : "#8E8E93")
+                    size: 22
                 }
 
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: modelData.label
-                    font.pixelSize: 9
-                    font.family: theme ? theme.defaultFontFamily : "Segoe UI"
+                    font.pixelSize: 10
+                    font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                    font.weight: isActive ? (theme ? theme.fontWeightSemibold : Font.DemiBold) : (theme ? theme.fontWeightRegular : Font.Normal)
                     antialiasing: true
                     color: isActive
-                           ? (theme && theme.darkMode ? "#ffffff" : "#7c3aed")
-                           : (theme && theme.darkMode ? "#8a8a9a" : "#3a3a50")
+                           ? (theme ? theme.accentColor : "#AF52DE")
+                           : (theme ? theme.navText : "#8E8E93")
                 }
             }
 

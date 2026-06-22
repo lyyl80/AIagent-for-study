@@ -32,14 +32,14 @@ from backend.vision_bridge import VisionBridge, CameraImageProvider
 
 def make_splash_pixmap():
     pm = QPixmap(80, 80)
-    pm.fill(QColor("#7c3aed"))
+    pm.fill(QColor("#AF52DE"))
     with QPainter(pm) as p:
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setBrush(QColor("#7c3aed"))
+        p.setBrush(QColor("#AF52DE"))
         p.setPen(Qt.PenStyle.NoPen)
         p.drawRoundedRect(0, 0, 80, 80, 18, 18)
         p.setPen(QColor("#ffffff"))
-        f = QFont("Segoe UI", 42, QFont.Weight.Bold)
+        f = QFont("SF Pro Display", 42, QFont.Weight.Bold)
         p.setFont(f)
         p.drawText(QRect(0, 0, 80, 80), Qt.AlignmentFlag.AlignCenter, "M")
     return pm
@@ -50,11 +50,11 @@ def create_app_icon():
     pm.fill(Qt.GlobalColor.transparent)
     with QPainter(pm) as p:
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setBrush(QColor("#7c3aed"))
+        p.setBrush(QColor("#AF52DE"))
         p.setPen(Qt.PenStyle.NoPen)
-        p.drawRoundedRect(2, 2, 60, 60, 12, 12)
+        p.drawRoundedRect(2, 2, 60, 60, 14, 14)
         p.setPen(QColor("#ffffff"))
-        f = QFont("Segoe UI", 32, QFont.Weight.Bold)
+        f = QFont("SF Pro Display", 32, QFont.Weight.Bold)
         p.setFont(f)
         p.drawText(QRect(0, 0, 64, 64), Qt.AlignmentFlag.AlignCenter, "M")
     return QIcon(pm)
@@ -70,7 +70,12 @@ if __name__ == "__main__":
     splash.show()
     app.processEvents()
 
-    default_font = QFont("Segoe UI", 10)
+    # Apple 风格字体优先级链: SF Pro Display → Segoe UI Variable → Segoe UI
+    default_font = QFont("SF Pro Display", 10)
+    if not default_font.exactMatch():
+        default_font = QFont("Segoe UI Variable", 10)
+        if not default_font.exactMatch():
+            default_font = QFont("Segoe UI", 10)
     app.setFont(default_font)
 
     engine = QQmlApplicationEngine()

@@ -1,124 +1,131 @@
 import QtQuick
 import QtQuick.Controls
+import MARS 1.0
 
 /**
- * FluentInfoBar - Fluent 风格信息提示条组件
- * 支持四种类型（info/success/warning/error），可自动或手动关闭
+ * FluentInfoBar — Apple 风格信息提示条
+ * 圆角12px、半透明背景、滑入动画
+ * 支持 info / success / warning / error 四种类型
  */
-Item{
+Item {
     id: root
 
-    // ====== 自定义属性 ======
-    property var theme: null                    // 主题对象
-    property string infoText: ""                // 提示文本内容
-    property string infoType: "info"            // 提示类型：info / success / warning / error
-    property int displayDuration: 3000          // 显示时长（毫秒），0 = 手动关闭
+    property var theme: null
+    property string infoText: ""
+    property string infoType: "info"
+    property int displayDuration: 3000
 
-    visible : false                             // 默认隐藏
-    height: visible ? 48 : 0                    // 可见时高度 48px，隐藏时 0px
-    clip: true                                  // 裁剪超出边界的内容
+    visible: false
+    height: visible ? 48 : 0
+    clip: true
 
-    signal dismissed()                          // 关闭信号：通知父组件已关闭
+    signal dismissed()
 
-    // 高度变化动画效果（200ms）
-    Behavior on height { NumberAnimation { duration: 200 }}
+    // 入场/退场动画
+    Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+    transform: Translate { id: slideY; y: root.visible ? 0 : -20 }
+    Behavior on y {
+        id: slideBehavior
+        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        target: slideY
+        property: "y"
+    }
 
-    // ====== 背景矩形 ======
-    Rectangle{
-        anchors.fill : parent
-        radius: 8                               // 圆角半径 8px
-        
-        // 根据类型动态设置背景色
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 4
+        radius: theme ? theme.cornerRadiusLg : 12
+
+        // 半透明背景色
         color: {
-             switch (infoType) {
-                case "success": return theme ? theme.successBg : "#4CAF50"   // 成功：绿色
-                case "warning": return theme ? theme.warningBg : "#FF9800"   // 警告：橙色
-                case "error":   return theme ? theme.errorBg : "#F44336"     // 错误：红色
-                default:        return theme ? theme.infoBg : "#2196F3"      // 信息：蓝色（默认）
-                }
-            }
-        
-        // ====== 左侧图标和文字区域 ======
-        Row{
+            var c = getTypeColor()
+            return Qt.rgba(c.r, c.g, c.b, theme && theme.darkMode ? 0.85 : 0.9)
+        }
+
+        // 细边框
+        border.color: Qt.rgba(1, 1, 1, theme && theme.darkMode ? 0.08 : 0.5)
+        border.width: 1
+
+        Row {
             anchors.left: parent.left
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8                          // 图标与文字间距 8px
-            
-            // 类型图标（Unicode 符号）
-            Label{
-                anchors.verticalCenter: parent.verticalCenter
-                text:{
+            spacing: 10
+
+            // 图标
+            Icon {
+                iconName: {
                     switch (infoType) {
-                        case "success": return "\u2713"   // ✓ 对勾
-                        case "warning": return "\u26A0"   // ⚠ 警告
-                        case "error":   return "\u2716"   // ✖ 叉号
-                        default:        return "\u2139"   // ℹ 信息（默认）
+                        case "success": return "checkmark"
+                        case "warning": return "warning"
+                        case "error":   return "xmark"
+                        default:        return "info"
                     }
                 }
-                font.pixelSize: 16              // 图标大小 16px
-                color: "#ffffff"                // 白色图标
-            }
-            
-            // 提示文本
-            Label{
+                iconColor: "#FFFFFF"
+                size: 18
                 anchors.verticalCenter: parent.verticalCenter
+            }
+
+            // 文本
+            Label {
                 text: infoText
-                font.pixelSize: 13              // 字体大小 13px
-                color: "#ffffff"                // 白色文字
+                font.pixelSize: theme ? theme.fontSizeBody : 13
+                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                font.weight: theme ? theme.fontWeightMedium : Font.Medium
+                color: "#FFFFFF"
+                anchors.verticalCenter: parent.verticalCenter
+                elide: Text.ElideRight
             }
         }
-        
-        // ====== 右侧关闭按钮（仅手动关闭模式显示）======
-        Label {
+
+        // 关闭按钮
+        Icon {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            text: "\u2716"                      // ✖ 关闭图标
-            color: "#ffffff"
-            font.pixelSize: 14
-            visible: displayDuration === 0      // 仅在手动关闭模式显示
+            iconName: "xmark"
+            iconColor: Qt.rgba(1, 1, 1, 0.7)
+            size: 14
+            visible: displayDuration === 0
 
             MouseArea {
                 anchors.fill: parent
-                onClicked: dismiss()            // 点击调用关闭函数
+                cursorShape: Qt.PointingHandCursor
+                onClicked: dismiss()
             }
         }
     }
-    
-    // ====== 公共方法 ======
-    
-    /**
-     * 显示信息提示条
-     * @param text - 提示文本内容
-     * @param type - 提示类型（info/success/warning/error）
-     * @param duration - 显示时长（毫秒），0 表示手动关闭
-     */
-    function show(text , type ,duration) {
-        infoText = text                         // 设置提示文本
-        infoType = type || "info"               // 设置类型，默认 info
-        displayDuration = duration || 3000      // 设置时长，默认 3000ms
-        visible = true                          // 显示提示条
 
-        // 如果设置了自动关闭时长，启动定时器
-        if(displayDuration > 0){
+    function getTypeColor() {
+        switch (infoType) {
+            case "success": return theme ? theme.successBg : "#34C759"
+            case "warning": return theme ? theme.warningBg : "#FF9F0A"
+            case "error":   return theme ? theme.errorBg : "#FF3B30"
+            default:        return theme ? theme.infoBg : "#007AFF"
+        }
+    }
+
+    function show(text, type, duration) {
+        infoText = text
+        infoType = type || "info"
+        displayDuration = duration || 3000
+        visible = true
+
+        if (displayDuration > 0) {
             hideTimer.interval = displayDuration
             hideTimer.start()
         }
     }
-    
-    /**
-     * 手动关闭信息提示条
-     */
+
     function dismiss() {
-        hideTimer.stop()                        // 停止定时器
-        root.visible = false                    // 隐藏提示条
-        dismissed()                             // 发出关闭信号
+        hideTimer.stop()
+        root.visible = false
+        dismissed()
     }
-    
-    // ====== 自动关闭定时器 ======
-    Timer{
+
+    Timer {
         id: hideTimer
-        onTriggered: dismiss()                  // 定时到达后自动关闭
+        onTriggered: dismiss()
     }
 }

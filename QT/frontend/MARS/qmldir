@@ -1,5 +1,6 @@
 module MARS
-FluentTheme 1.0 FluentTheme.qml
+AppleTheme 1.0 AppleTheme.qml
+FluentTheme 1.0 AppleTheme.qml
 NavigationPanel 1.0 components/NavigationPanel.qml
 FluentCard 1.0 components/FluentCard.qml
 FluentButton 1.0 components/FluentButton.qml

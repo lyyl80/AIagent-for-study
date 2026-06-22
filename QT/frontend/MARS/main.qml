@@ -5,21 +5,21 @@ import MARS 1.0
 
 Window {
     id: root
-    width: 960
-    height: 640
-    minimumWidth: 800
-    minimumHeight: 500
+    width: 1000
+    height: 680
+    minimumWidth: 860
+    minimumHeight: 560
     visible: true
     title: ""
     flags: Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint
-    readonly property var theme: FluentTheme {}
+    readonly property var theme: AppleTheme {}
     color: theme.bgColor
 
+    // 暗色模式快捷键
     Shortcut {
         sequence: "T"
         onActivated: {
             root.theme.darkMode = !root.theme.darkMode
-            console.log("darkMode toggled:", root.theme.darkMode)
         }
     }
 

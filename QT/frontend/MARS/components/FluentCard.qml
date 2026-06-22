@@ -2,69 +2,73 @@ import QtQuick
 import QtQuick.Controls
 
 /**
- * FluentCard - Fluent 风格卡片组件
- * 提供带阴影效果的容器，支持标题和自定义内容区域
+ * FluentCard — Apple 风格卡片容器
+ * 柔和多层阴影、细腻边框、统一的圆角和间距
  */
 Item {
     id: root
 
-    // ====== 自定义属性 ======
-    property alias cardTitle: titleLabel.text  // 卡片标题（直接绑定到内部 Label）
-    property bool elevated: true               // 是否显示阴影效果
-    property var theme: null                   // 主题对象
-    property color cardBorder: "transparent"   // 卡片边框颜色
+    property alias cardTitle: titleLabel.text
+    property bool elevated: true
+    property var theme: null
+    property color cardBorder: "transparent"
 
-    default property alias content: contentArea.data  // 默认属性：允许子元素直接添加到内容区
+    default property alias content: contentArea.data
 
-    // ====== 阴影层（位于卡片表面下方，偏移 2px）======
+    // 柔和阴影层（Apple 风格：多层叠加）
     Rectangle {
-        id: shadowRect
-        anchors.fill: cardSurface                    // 填充卡片表面
-        anchors.topMargin: 2                         // 向下偏移 2px
-        anchors.leftMargin: 2                        // 向右偏移 2px
-        radius: cardSurface.radius                   // 与卡片相同的圆角
-        visible: elevated                            // 仅在启用阴影时显示
-        
-        // 阴影颜色：深色模式更透明，浅色模式更深
-        color: theme && theme.darkMode
-               ? Qt.rgba(0, 0, 0, 0.3)               // 深色模式：30% 透明度黑色
-               : Qt.rgba(0, 0, 0, 0.1)               // 浅色模式：10% 透明度黑色
+        id: shadowLayer2
+        anchors.fill: cardSurface
+        anchors.topMargin: 1
+        radius: cardSurface.radius
+        visible: elevated
+        color: theme && theme.darkMode ? Qt.rgba(0,0,0,0.15) : Qt.rgba(0,0,0,0.02)
     }
 
-    // ====== 卡片表面 ======
+    Rectangle {
+        id: shadowLayer1
+        anchors.fill: cardSurface
+        anchors.topMargin: 2
+        radius: cardSurface.radius
+        visible: elevated
+        color: theme && theme.darkMode ? Qt.rgba(0,0,0,0.2) : Qt.rgba(0,0,0,0.03)
+    }
+
+    // 卡片表面
     Rectangle {
         id: cardSurface
-        anchors.fill: parent                         // 填充整个组件
-        radius: theme ? theme.cardRadius : 8         // 圆角半径：优先使用主题设置，默认 8px
-        color: theme ? theme.cardColor : "#ffffff"   // 背景色：优先使用主题设置，默认白色
-        border.color: root.cardBorder
-        border.width: root.cardBorder === "transparent" ? 0 : 1
+        anchors.fill: parent
+        radius: theme ? theme.cornerRadiusMd : 10
+        color: theme ? theme.cardColor : "#FFFFFF"
+        border.color: root.cardBorder === "transparent"
+                       ? (theme && !theme.darkMode ? Qt.rgba(0,0,0,0.04) : "transparent")
+                       : root.cardBorder
+        border.width: (root.cardBorder !== "transparent" || (theme && !theme.darkMode)) ? 1 : 0
 
-        // ====== 标题区域 ======
+        // 标题区域
         Label {
             id: titleLabel
-            visible: text !== ""                     // 仅在有标题文本时显示
+            visible: text !== ""
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: 16                      // 内边距 16px
-            
-            font.pixelSize: 14                       // 字体大小 14px
-            font.bold: true                          // 粗体显示
-            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-            color: theme ? theme.textColor : "#333"  // 文字颜色：优先使用主题设置
+            anchors.margins: 20
+
+            font.pixelSize: theme ? theme.fontSizeHeadline : 15
+            font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
+            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+            color: theme ? theme.textColor : "#1C1C1E"
             antialiasing: true
         }
 
-        // ====== 内容区域（留给调用方填充）======
+        // 内容区域
         Item {
             id: contentArea
-            // 动态定位：如果标题可见则在标题下方，否则在顶部
             anchors.top: titleLabel.visible ? titleLabel.bottom : parent.top
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.topMargin: titleLabel.visible ? 16 : 0  // 有标题时上边距 16px
+            anchors.topMargin: titleLabel.visible ? 12 : 0
         }
     }
 }

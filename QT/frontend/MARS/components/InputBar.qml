@@ -1,7 +1,12 @@
 import QtQuick
 import QtQuick.Controls
-import "."
+import MARS 1.0
+import "../components"
 
+/**
+ * InputBar — Apple Messages 风格输入栏
+ * 胶囊形容器、圆形发送按钮、Spring 按压动画
+ */
 Rectangle {
     id: root
 
@@ -9,19 +14,20 @@ Rectangle {
     property bool isThinking: false
     signal sendMessage(string text)
 
-    height: theme ? theme.inputBarHeight : 56
+    height: theme ? theme.inputBarHeight : 64
     width: parent ? parent.width : 0
     color: "transparent"
 
+    // 输入容器（胶囊形）
     Rectangle {
         anchors.fill: parent
         anchors.topMargin: 8
-        anchors.leftMargin: 8
-        anchors.rightMargin: 8
+        anchors.leftMargin: 12
+        anchors.rightMargin: 12
         anchors.bottomMargin: 8
-        radius: 10
-        color: theme ? theme.cardColor : "#2d2d2d"
-        border.color: theme ? theme.dividerColor : "#3d3d3d"
+        radius: 16
+        color: theme ? theme.cardColor : "#FFFFFF"
+        border.color: theme ? theme.dividerColor : Qt.rgba(0,0,0,0.08)
         border.width: 1
         clip: true
 
@@ -31,14 +37,15 @@ Rectangle {
             anchors.rightMargin: 48
             anchors.margins: 8
 
-            placeholderText: root.isThinking ? "AI 正在思考，请稍等..." : "输入消息,Enter to send"
-            placeholderTextColor: theme ? theme.secondaryText : "#909090"
-            font.family: theme ? theme.defaultFontFamily : "Segoe UI"
-            color: theme ? theme.textColor : "#e0e0e0"
-            font.pixelSize: 14
+            placeholderText: root.isThinking ? "AI 正在思考，请稍等..." : "输入消息，Enter 发送"
+            placeholderTextColor: theme ? theme.secondaryText : "#8E8E93"
+            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+            color: theme ? theme.textColor : "#1C1C1E"
+            font.pixelSize: theme ? theme.fontSizeHeadline : 15
             enabled: !root.isThinking
             wrapMode: Text.Wrap
             background: null
+            selectByMouse: true
 
             Keys.onPressed: function(event) {
                 if (event.key === Qt.Key_Return && !(event.modifiers & Qt.ShiftModifier)) {
@@ -48,32 +55,66 @@ Rectangle {
             }
         }
 
-        Button {
+        // 发送按钮（圆形）
+        Item {
             id: sendBtn
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
-            anchors.rightMargin: 4
+            anchors.rightMargin: 6
             width: 36
             height: 36
-            enabled: !root.isThinking
 
-            background: Rectangle {
-                radius: 8
-                color: parent.enabled
-                       ? (parent.hovered
-                          ? Qt.lighter(theme ? theme.accentColor : "#7c3aed", 1.1)
-                          : (theme ? theme.accentColor : "#7c3aed"))
-                       : (theme ? theme.dividerColor : "#555555")
-                Behavior on color { ColorAnimation { duration: 100 } }
+            property bool hovered: false
+            property bool pressed: false
+
+            // Spring 按压
+            scale: pressed ? 0.85 : (hovered ? 1.05 : 1.0)
+            Behavior on scale {
+                SpringAnimation { spring: 4; damping: 0.4; mass: 0.5 }
             }
 
-            contentItem: Icon {
-                iconName: root.isThinking ? "refresh" : "arrow-right"
-                iconColor: "#ffffff"
-                size: 16
+            Rectangle {
+                anchors.fill: parent
+                radius: 18
+                color: {
+                    if (!enabled) return theme ? theme.secondaryBg : "#E5E5EA"
+                    if (sendBtn.pressed) return theme ? theme.accentPressed : Qt.darker("#AF52DE", 1.1)
+                    if (sendBtn.hovered) return theme ? theme.accentHover : Qt.lighter("#AF52DE", 1.12)
+                    return theme ? theme.accentColor : "#AF52DE"
+                }
+                Behavior on color { ColorAnimation { duration: 150 } }
             }
 
-            onClicked: doSend()
+            // 图标
+            Icon {
+                anchors.centerIn: parent
+                iconName: root.isThinking ? "refresh" : "arrow-up"
+                iconColor: "#FFFFFF"
+                size: 18
+
+                // 思考时旋转
+                RotationAnimator on rotation {
+                    target: parent
+                    running: root.isThinking
+                    from: 0
+                    to: 360
+                    duration: 800
+                    loops: Animation.Infinite
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                hoverEnabled: true
+                enabled: !root.isThinking
+
+                onEntered: sendBtn.hovered = true
+                onExited: sendBtn.hovered = false
+                onPressed: sendBtn.pressed = true
+                onReleased: sendBtn.pressed = false
+                onClicked: doSend()
+            }
         }
     }
 
