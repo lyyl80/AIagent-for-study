@@ -178,6 +178,10 @@ Rectangle {
         // 工具调用卡片
         Rectangle {
             id: toolCard
+            property bool toolExpanded: false
+            property bool toolsExpanded: false
+            property bool isGroup: root.toolName === "group"
+            property var toolsList: []
             anchors.left: parent.left
             anchors.right: parent.right
             visible: root.toolName !== ""
@@ -185,11 +189,6 @@ Rectangle {
             color: theme ? theme.toolBubbleBg : Qt.rgba(0,0,0,0.02)
             border.color: theme ? theme.toolBubbleBorder : Qt.rgba(0,0,0,0.06)
             border.width: 1
-
-            // 解析工具组
-            property var toolsList: []
-            property bool isGroup: root.toolName === "group"
-            property bool toolsExpanded: false
 
             Component.onCompleted: {
                 if (isGroup) {
