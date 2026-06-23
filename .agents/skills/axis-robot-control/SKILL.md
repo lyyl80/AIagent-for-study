@@ -5,36 +5,42 @@ description: Use when controlling a 4-axis robotic arm via serial port, includin
 
 # Axis Robot Control
 
-4-axis robotic arm on COM5 @ 115200. Text protocol: `Gx y z` (grasp), `Rx y z` (release). Coordinates in mm.
+4-axis robotic arm on COM5 @ 115200. Text protocol: `Gx y z` (grasp), `Rx y z` (release). Coords in mm.
 
-## Commands
+## 实操要点
+
+1. **坐标取整** — 视觉输出带小数，协议不认，`G117 251 4` ✅
+2. **Z 抬高** — Z<10 易 ERR，取 `max(取整Z, 10)`
+3. **释放用 R** — `R-140 200 160` 放料仓，不是 G
+4. **每次抓前重读坐标** — `coordinates/latest_coordinates.json`
+
+## 标准流程
+
+```
+读取最新坐标 → 取整(S) → Gx y z 抓取 → Rx y z 释放
+```
+
+## 命令
 
 ```bash
-serial_send(data="G140 200 60", port="COM5")        # Grasp: move + close gripper
-serial_send(data="R0 208 170", port="COM5")          # Release: move + open gripper
-serial_send(data="G140 200 60", read_response=True)  # Read robot feedback
+serial_send(data="G117 251 10", port="COM5")       # 抓取
+serial_send(data="R0 208 170", port="COM5")         # 回原点释放
+serial_send(data="R-140 200 160", port="COM5")      # 放料仓
 ```
 
-Workspace: x[-270,270] y[160,330] z[0,240]. Sending out-of-range coords will fail.
+## 默认位置
 
-## Coordinate Transform
+| 位置 | 指令 |
+|------|------|
+| Home | `R0 208 170` |
+| Drop | `R-140 200 160` |
 
-Camera coords (meters) → ×1000 → `camera_to_robot()` → robot coords (mm) → `serial_send`
+## 工作空间
 
-Calibration file: `calibration/calibration.npz`. If missing, re-run `APP/calibrate.py`.
+X[-270,270] Y[160,330] Z[0,240]
 
-## Notes
+## 故障排查
 
-- Robot responds `OK G` / `OK R` after completing movement
-- Default home position: `R0 208 170` (release + return home)
-- Default drop position: `G-140 200 160` (release at drop bin)
-
-## 坐标获取
-
-视觉检测实时写入 JSON 坐标文件，AI 直接用读文件工具查看：
-
-```
-coordinates/latest_coordinates.json
-```
-
-每个目标含 `world_mm.X/Y/Z`，已标定，直接填入 `serial_send` 的 `Gx y z` 指令即可。
+- **无响应** → 检查电源/USB
+- **ERR** → 坐标超范围 / 带小数 / Z太低
+- **掉线** → 硬件复位重试
