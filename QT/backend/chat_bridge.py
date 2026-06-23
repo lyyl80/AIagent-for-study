@@ -228,14 +228,9 @@ class ChatBridge(QObject):
             self.errorOccurred.emit(f"加载会话失败: {e}")
 
     def _rebuild_chat(self):
-        """
-        从Memory历史记录重建聊天界面
-        
-        遍历memory.history，按时间顺序发射消息和工具调用信号到QML。
-        连续的工具调用会自动分组成一个组，避免界面混乱。
-        """
+        """从Memory历史记录重建聊天界面，每个工具调用单独显示"""
         import json
-        
+
         i = 0
         while i < len(self._current_memory.history):
             entry = self._current_memory.history[i]
@@ -244,33 +239,11 @@ class ChatBridge(QObject):
                 output = entry.get("output_summary") or entry.get("output", "")
                 if tool in ("talk", "finish"):
                     self.messageReceived.emit("ai", output)
-                    i += 1
                 elif tool == "user":
                     pass  # 用户消息不需要重复显示
-                    i += 1
                 else:
-                    tools = [{"name": tool, "result": output}]
-                    j = i + 1
-                    while j < len(self._current_memory.history):
-                        next_entry = self._current_memory.history[j]
-                        if "input" in next_entry:
-                            next_tool = next_entry.get("input", {}).get("tool", "")
-                            if next_tool not in ("talk", "finish", "user"):
-                                next_output = next_entry.get("output_summary") or next_entry.get("output", "")
-                                tools.append({"name": next_tool, "result": next_output})
-                                j += 1
-                                continue
-                        break
-
-                    if len(tools) == 1:
-                        args = entry.get("input", {}).get("tool_args", {})
-                        self.toolCalled.emit(tools[0]["name"], str(args), tools[0]["result"])
-                    else:
-                        self.toolCalled.emit(tools[0]["name"], "", tools[0]["result"])
-                        for k in range(1, len(tools)):
-                            self.toolCalled.emit(tools[k]["name"], "", tools[k]["result"])
-
-                    i = j
+                    args = entry.get("input", {}).get("tool_args", {})
+                    self.toolCalled.emit(tool, str(args), output)
             else:
                 role = entry.get("role", "")
                 content = entry.get("content", "")
@@ -278,7 +251,7 @@ class ChatBridge(QObject):
                     self.messageReceived.emit("user", content)
                 elif role == "assistant":
                     self.messageReceived.emit("ai", content)
-                i += 1
+            i += 1
 
     @Slot(str)
     def deleteSession(self, filename):

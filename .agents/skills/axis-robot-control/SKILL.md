@@ -9,8 +9,7 @@ description: Use when controlling a 4-axis robotic arm via serial port, includin
 
 ## 实操要点
 
-1. **坐标取整** — 视觉输出带小数，协议不认，`G117 251 4` ✅
-2. **Z 抬高** — Z<10 易 ERR，取 `max(取整Z, 10)`
+1. **坐标取整** — 视觉输出带小数，协议不认，`G117 251 4` 往小取整
 3. **释放用 R** — `R-140 200 160` 放料仓，不是 G
 4. **每次抓前重读坐标** — `coordinates/latest_coordinates.json`
 

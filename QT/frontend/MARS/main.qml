@@ -138,23 +138,6 @@ Window {
                 }
 
                 function onToolCalled(toolName, args, result) {
-                    var lastIdx = chatPage.chatModel.count - 1
-                    if (lastIdx >= 0) {
-                        var lastItem = chatPage.chatModel.get(lastIdx)
-                        if (lastItem.sender === "ai" && lastItem.message === "" && lastItem.toolName !== "") {
-                            // Last item is a tool call — merge into group
-                            var tools = []
-                            if (lastItem.toolName === "group") {
-                                tools = JSON.parse(lastItem.toolResult)
-                            } else {
-                                tools.push({name: lastItem.toolName, result: lastItem.toolResult})
-                            }
-                            tools.push({name: toolName, result: result})
-                            chatPage.chatModel.setProperty(lastIdx, "toolName", "group")
-                            chatPage.chatModel.setProperty(lastIdx, "toolResult", JSON.stringify(tools))
-                            return
-                        }
-                    }
                     chatPage.chatModel.append({
                         sender: "ai",
                         message: "",
