@@ -862,10 +862,23 @@ def serial_send_tool(**kwargs) -> str:
         ser.write(payload)
         result = f"已发送 {len(payload)} 字节到 {port}@{baudrate}"
         if read_response:
-            time.sleep(0.1)
-            response = ser.read_all().decode("utf-8", errors="replace")
-            if response:
-                result += f"\n响应: {response}"
+            # 机械臂响应较慢（约1s），持续读取直到超时无新数据
+            response = b""
+            deadline = time.time() + timeout
+            ser.timeout = 0.2  # 每次 read 最多等 200ms
+            while time.time() < deadline:
+                try:
+                    chunk = ser.read(1024)
+                    if chunk:
+                        response += chunk
+                    elif response:
+                        # 有数据后连续 200ms 无新数据 → 响应结束
+                        break
+                except:
+                    break
+            text = response.decode("utf-8", errors="replace").strip()
+            if text:
+                result += f"\n响应: {text}"
         ser.close()
         return result
     except serial.SerialException as e:

@@ -181,72 +181,85 @@ Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             visible: root.toolName !== ""
-            radius: theme ? theme.cornerRadiusMd : 10
+            radius: 8
             color: theme ? theme.toolBubbleBg : Qt.rgba(0,0,0,0.02)
             border.color: theme ? theme.toolBubbleBorder : Qt.rgba(0,0,0,0.06)
             border.width: 1
-            height: visible ? toolInner.height + 10 : 0
+            clip: true
 
             property bool toolExpanded: false
 
+            // 折叠/展开动画
+            height: toolExpanded ? toolBody.height + header.height + 10 : header.height
+            Behavior on height {
+                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            }
+
             Column {
-                id: toolInner
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                anchors.margins: 5
-                spacing: 0
 
-                MouseArea {
-                    height: 28
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: toolCard.toolExpanded = !toolCard.toolExpanded
+                // 标题栏（点击展开/收起）
+                Rectangle {
+                    id: header
+                    width: parent.width
+                    height: 34
+                    color: "transparent"
 
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 8
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 6
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: toolCard.toolExpanded = !toolCard.toolExpanded
 
-                        Icon {
-                            iconName: "chevron-right"
-                            iconColor: theme ? theme.secondaryText : "#8E8E93"
-                            size: 12
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
-                            rotation: toolCard.toolExpanded ? 90 : 0
-                            Behavior on rotation { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                        }
+                            spacing: 6
 
-                        Icon {
-                            iconName: "tools"
-                            iconColor: theme ? theme.accentColor : "#AF52DE"
-                            size: 14
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                            Icon {
+                                iconName: "chevron-right"
+                                iconColor: theme ? theme.secondaryText : "#8E8E93"
+                                size: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                rotation: toolCard.toolExpanded ? 90 : 0
+                                Behavior on rotation {
+                                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                                }
+                            }
 
-                        Label {
-                            text: root.toolName
-                            font.pixelSize: theme ? theme.fontSizeBody : 13
-                            font.weight: theme ? theme.fontWeightSemibold : Font.DemiBold
-                            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
-                            color: theme ? theme.textColor : "#1C1C1E"
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                            Icon {
+                                iconName: "tools"
+                                iconColor: theme ? theme.accentColor : "#AF52DE"
+                                size: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
 
-                        Label {
-                            text: " · " + (root.toolResult || "").replace(/\n/g, ' ').substring(0, 50)
-                            font.pixelSize: theme ? theme.fontSizeCaption : 11
-                            font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
-                            color: theme ? theme.secondaryText : "#8E8E93"
-                            elide: Text.ElideRight
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: !toolCard.toolExpanded
+                            Label {
+                                text: root.toolName
+                                font.pixelSize: theme ? theme.fontSizeBody : 13
+                                font.weight: theme ? theme.fontWeightMedium : Font.Medium
+                                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                color: theme ? theme.textColor : "#1C1C1E"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Label {
+                                text: " · " + (root.toolResult || "").replace(/\n/g, ' ').trim().substring(0, 60)
+                                font.pixelSize: theme ? theme.fontSizeCaption : 11
+                                font.family: theme ? theme.defaultFontFamily : "SF Pro Display"
+                                color: theme ? theme.tertiaryText : "#C7C7CC"
+                                elide: Text.ElideRight
+                                anchors.verticalCenter: parent.verticalCenter
+                                visible: !toolCard.toolExpanded
+                                clip: true
+                            }
                         }
                     }
                 }
 
+                // 分割线
                 Rectangle {
                     width: parent.width
                     height: 1
@@ -254,18 +267,30 @@ Rectangle {
                     visible: toolCard.toolExpanded
                 }
 
-                Text {
-                    text: root.toolResult
-                    font.pixelSize: theme ? theme.fontSizeCaption : 11
-                    font.family: "SF Mono, Courier New, Consolas, monospace"
-                    color: theme ? theme.secondaryText : "#8E8E93"
-                    wrapMode: Text.Wrap
-                    visible: toolCard.toolExpanded
-                    leftPadding: 16
-                    topPadding: 6
-                    bottomPadding: 6
-                    rightPadding: 8
+                // 结果内容
+                Item {
+                    id: toolBody
                     width: parent.width
+                    visible: toolCard.toolExpanded
+
+                    implicitHeight: resultText.implicitHeight + 16
+
+                    Text {
+                        id: resultText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 12
+                        anchors.topMargin: 8
+                        anchors.bottomMargin: 8
+                        text: root.toolResult
+                        font.pixelSize: theme ? theme.fontSizeCaption : 11
+                        font.family: "SF Mono, Courier New, Consolas, monospace"
+                        color: theme ? theme.secondaryText : "#8E8E93"
+                        wrapMode: Text.Wrap
+                        textFormat: Text.PlainText
+                    }
                 }
             }
         }

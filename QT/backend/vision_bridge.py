@@ -152,14 +152,20 @@ class VisionBridge(QObject):
 
                     self._provider.updateFrame(img)
                     self._frame_count += 1
-                    self.frameCountChanged.emit()
-                    self._set_target_count(len(boxes))
+                    try:
+                        self.frameCountChanged.emit()
+                        self._set_target_count(len(boxes))
+                    except RuntimeError:
+                        break  # 窗口已关闭
 
-            except (ConnectionError, ConnectionResetError, BrokenPipeError):
+            except (ConnectionError, ConnectionResetError, BrokenPipeError, RuntimeError):
                 pass
             finally:
                 conn.close()
-                self._set_connected(False)
-                self._set_target_count(0)
+                try:
+                    self._set_connected(False)
+                    self._set_target_count(0)
+                except RuntimeError:
+                    pass  # 窗口已关闭
 
         server.close()
