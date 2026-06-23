@@ -7,6 +7,8 @@ from PySide6.QtCore import QObject, Slot, Signal, Property, QMutex, QByteArray
 from PySide6.QtGui import QImage, QPainter, QColor, QPen, QFont
 from PySide6.QtQuick import QQuickImageProvider
 
+from backend.target_coordinates import CoordinateManager
+
 
 class CameraImageProvider(QQuickImageProvider):
     def __init__(self):
@@ -47,6 +49,7 @@ class VisionBridge(QObject):
         self._thread: threading.Thread | None = None
         self._host = "127.0.0.1"
         self._port = 12345
+        self.coord_mgr = CoordinateManager()
 
     @Property(int, notify=frameCountChanged)
     def frameCount(self):
@@ -133,6 +136,10 @@ class VisionBridge(QObject):
                     painter.setFont(font)
 
                     boxes = data.get("boxes", [])
+
+                    # 实时写入坐标文件供 AI 读取
+                    self.coord_mgr.update(boxes)
+
                     for box in boxes:
                         x1, y1, x2, y2 = box["x1"], box["y1"], box["x2"], box["y2"]
                         painter.drawRect(x1, y1, x2 - x1, y2 - y1)

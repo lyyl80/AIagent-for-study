@@ -31,10 +31,10 @@ Calibration file: `calibration/calibration.npz`. If missing, re-run `APP/calibra
 
 ## 坐标获取
 
-视觉检测实时写入坐标文件，AI 直接用读文件工具查看：
+视觉检测实时写入 JSON 坐标文件，AI 直接用读文件工具查看：
 
 ```
-coordinates/latest_coordinates.txt  →  当前所有目标的 X/Y/Z 毫米坐标
+coordinates/latest_coordinates.json
 ```
 
-坐标已标定，直接填入 `serial_send` 的 `Gx y z` 指令即可。
+每个目标含 `world_mm.X/Y/Z`，已标定，直接填入 `serial_send` 的 `Gx y z` 指令即可。
